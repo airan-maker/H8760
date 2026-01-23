@@ -1,0 +1,304 @@
+"""
+재무 분석 엔진
+
+NPV, IRR, DSCR, LCOH 등 재무 지표를 계산합니다.
+"""
+import numpy as np
+from dataclasses import dataclass
+from typing import List, Optional
+
+
+@dataclass
+class FinancialConfig:
+    """재무 분석 설정"""
+
+    capex: float  # 초기 투자비 (원)
+    opex_ratio: float  # OPEX 비율 (% of CAPEX)
+    stack_replacement_cost: float  # 스택 교체 비용 (원)
+    stack_lifetime_hours: int  # 스택 수명 (시간)
+    discount_rate: float  # 할인율 (%)
+    project_lifetime: int  # 프로젝트 기간 (년)
+    debt_ratio: float  # 부채 비율 (%)
+    interest_rate: float  # 대출 이자율 (%)
+    loan_tenor: int  # 대출 기간 (년)
+
+
+@dataclass
+class YearlyCashflow:
+    """연간 현금흐름"""
+
+    year: int
+    revenue: float
+    opex: float
+    stack_replacement: float
+    debt_service: float
+    net_cashflow: float
+    cumulative_cashflow: float
+    dscr: float
+
+
+@dataclass
+class FinancialResult:
+    """재무 분석 결과"""
+
+    npv: float
+    irr: float
+    payback_period: float
+    lcoh: float  # 수소 균등화 비용 (원/kg)
+    dscr_min: float
+    dscr_avg: float
+    yearly_cashflows: List[YearlyCashflow]
+
+
+def calculate_debt_service(
+    principal: float, interest_rate: float, tenor: int
+) -> List[float]:
+    """
+    원리금 균등상환 계산
+
+    Args:
+        principal: 대출 원금
+        interest_rate: 연 이자율 (%)
+        tenor: 대출 기간 (년)
+
+    Returns:
+        List[float]: 연도별 원리금 상환액
+    """
+    if principal <= 0 or tenor <= 0:
+        return [0.0] * tenor
+
+    r = interest_rate / 100
+    if r == 0:
+        return [principal / tenor] * tenor
+
+    # PMT 공식
+    pmt = principal * (r * (1 + r) ** tenor) / ((1 + r) ** tenor - 1)
+
+    return [pmt] * tenor
+
+
+def calculate_lcoh(
+    total_capex: float,
+    annual_opex: float,
+    annual_h2_production: float,
+    discount_rate: float,
+    project_lifetime: int,
+    annual_electricity_cost: float,
+) -> float:
+    """
+    수소 균등화 비용(LCOH) 계산
+
+    Args:
+        total_capex: 총 CAPEX
+        annual_opex: 연간 OPEX
+        annual_h2_production: 연간 수소 생산량 (kg)
+        discount_rate: 할인율 (%)
+        project_lifetime: 프로젝트 기간
+        annual_electricity_cost: 연간 전력 비용
+
+    Returns:
+        float: LCOH (원/kg)
+    """
+    r = discount_rate / 100
+
+    # 총 비용의 현재가치
+    total_cost_pv = total_capex
+
+    for year in range(1, project_lifetime + 1):
+        year_cost = annual_opex + annual_electricity_cost
+        total_cost_pv += year_cost / ((1 + r) ** year)
+
+    # 총 수소 생산량의 현재가치
+    total_h2_pv = 0
+    for year in range(1, project_lifetime + 1):
+        total_h2_pv += annual_h2_production / ((1 + r) ** year)
+
+    if total_h2_pv <= 0:
+        return 0
+
+    return total_cost_pv / total_h2_pv
+
+
+def run_financial_analysis(
+    config: FinancialConfig,
+    yearly_revenues: List[float],
+    yearly_electricity_costs: List[float],
+    yearly_h2_production: List[float],
+    stack_replacement_years: Optional[List[int]] = None,
+) -> FinancialResult:
+    """
+    재무 분석 실행
+
+    Args:
+        config: 재무 분석 설정
+        yearly_revenues: 연도별 수익
+        yearly_electricity_costs: 연도별 전력 비용
+        yearly_h2_production: 연도별 수소 생산량 (kg)
+        stack_replacement_years: 스택 교체 연도 목록
+
+    Returns:
+        FinancialResult: 재무 분석 결과
+    """
+    # 부채 계산
+    debt_amount = config.capex * (config.debt_ratio / 100)
+    equity_amount = config.capex - debt_amount
+
+    debt_service = calculate_debt_service(
+        debt_amount, config.interest_rate, config.loan_tenor
+    )
+
+    # OPEX
+    annual_opex = config.capex * (config.opex_ratio / 100)
+
+    # 스택 교체 연도 결정
+    if stack_replacement_years is None:
+        # 연간 가동 시간 추정 (85% 가동률 가정)
+        annual_hours = 8760 * 0.85
+        years_per_stack = config.stack_lifetime_hours / annual_hours
+        stack_replacement_years = []
+        year = int(years_per_stack)
+        while year < config.project_lifetime:
+            stack_replacement_years.append(year)
+            year += int(years_per_stack)
+
+    # 현금흐름 계산
+    cashflows = [-equity_amount]  # 초기 자기자본 투자
+    yearly_cashflows = []
+    cumulative = -equity_amount
+    dscr_values = []
+
+    for year in range(1, config.project_lifetime + 1):
+        idx = year - 1
+
+        revenue = yearly_revenues[idx] if idx < len(yearly_revenues) else 0
+        elec_cost = (
+            yearly_electricity_costs[idx]
+            if idx < len(yearly_electricity_costs)
+            else 0
+        )
+
+        # 스택 교체 비용
+        stack_cost = (
+            config.stack_replacement_cost
+            if year in stack_replacement_years
+            else 0
+        )
+
+        # 부채 상환
+        ds = debt_service[year - 1] if year <= len(debt_service) else 0
+
+        # 순현금흐름
+        gross_margin = revenue - elec_cost
+        operating_income = gross_margin - annual_opex - stack_cost
+        net_cf = operating_income - ds
+
+        cashflows.append(net_cf)
+        cumulative += net_cf
+
+        # DSCR 계산
+        dscr = operating_income / ds if ds > 0 else float("inf")
+        if ds > 0:
+            dscr_values.append(dscr)
+
+        yearly_cashflows.append(
+            YearlyCashflow(
+                year=year,
+                revenue=revenue,
+                opex=annual_opex + elec_cost,
+                stack_replacement=stack_cost,
+                debt_service=ds,
+                net_cashflow=net_cf,
+                cumulative_cashflow=cumulative,
+                dscr=dscr,
+            )
+        )
+
+    # NPV 계산
+    npv = 0
+    r = config.discount_rate / 100
+    for t, cf in enumerate(cashflows):
+        npv += cf / ((1 + r) ** t)
+
+    # IRR 계산
+    irr = _calculate_irr(cashflows)
+
+    # 투자회수기간 계산
+    payback = _calculate_payback(yearly_cashflows)
+
+    # LCOH 계산
+    avg_h2_production = (
+        sum(yearly_h2_production) / len(yearly_h2_production)
+        if yearly_h2_production
+        else 0
+    )
+    avg_elec_cost = (
+        sum(yearly_electricity_costs) / len(yearly_electricity_costs)
+        if yearly_electricity_costs
+        else 0
+    )
+    lcoh = calculate_lcoh(
+        config.capex,
+        annual_opex,
+        avg_h2_production,
+        config.discount_rate,
+        config.project_lifetime,
+        avg_elec_cost,
+    )
+
+    # DSCR 집계
+    dscr_min = min(dscr_values) if dscr_values else 0
+    dscr_avg = sum(dscr_values) / len(dscr_values) if dscr_values else 0
+
+    return FinancialResult(
+        npv=npv,
+        irr=irr if irr else 0,
+        payback_period=payback,
+        lcoh=lcoh,
+        dscr_min=dscr_min,
+        dscr_avg=dscr_avg,
+        yearly_cashflows=yearly_cashflows,
+    )
+
+
+def _calculate_irr(
+    cashflows: List[float], max_iterations: int = 1000, tolerance: float = 1e-6
+) -> Optional[float]:
+    """IRR 계산 (Newton-Raphson)"""
+    rate = 0.1
+
+    for _ in range(max_iterations):
+        npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cashflows))
+
+        npv_derivative = sum(
+            -t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cashflows) if t > 0
+        )
+
+        if abs(npv_derivative) < 1e-10:
+            break
+
+        new_rate = rate - npv / npv_derivative
+
+        if abs(new_rate - rate) < tolerance:
+            return new_rate * 100
+
+        rate = new_rate
+
+        # 발산 방지
+        if rate < -0.99 or rate > 10:
+            return None
+
+    return rate * 100
+
+
+def _calculate_payback(yearly_cashflows: List[YearlyCashflow]) -> float:
+    """투자회수기간 계산"""
+    for i, cf in enumerate(yearly_cashflows):
+        if cf.cumulative_cashflow >= 0:
+            if i == 0:
+                return 1.0
+
+            prev_cumulative = yearly_cashflows[i - 1].cumulative_cashflow
+            fraction = -prev_cumulative / cf.net_cashflow
+            return i + fraction
+
+    return float(len(yearly_cashflows))

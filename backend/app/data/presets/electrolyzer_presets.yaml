@@ -1,0 +1,85 @@
+# 전해조 프리셋 설정
+presets:
+  - id: small_pem
+    name: 소규모 PEM
+    description: 1-5 MW PEM 전해조 (수전해)
+    electrolyzer_type: PEM
+    capacity_mw: 5.0
+    efficiency: 67.0
+    capex_per_kw: 1500000  # 원/kW
+    degradation_rate: 0.5  # %/year
+    stack_lifetime: 80000  # hours
+    operating_pressure: 30  # bar
+    operating_temperature: 80  # °C
+
+  - id: medium_pem
+    name: 중규모 PEM
+    description: 10-20 MW PEM 전해조
+    electrolyzer_type: PEM
+    capacity_mw: 10.0
+    efficiency: 65.0
+    capex_per_kw: 1200000
+    degradation_rate: 0.5
+    stack_lifetime: 80000
+    operating_pressure: 30
+    operating_temperature: 80
+
+  - id: large_pem
+    name: 대규모 PEM
+    description: 20-50 MW PEM 전해조
+    electrolyzer_type: PEM
+    capacity_mw: 30.0
+    efficiency: 63.0
+    capex_per_kw: 1000000
+    degradation_rate: 0.5
+    stack_lifetime: 80000
+    operating_pressure: 30
+    operating_temperature: 80
+
+  - id: small_alk
+    name: 소규모 ALK
+    description: 5-10 MW 알칼라인 전해조
+    electrolyzer_type: ALK
+    capacity_mw: 5.0
+    efficiency: 63.0
+    capex_per_kw: 900000
+    degradation_rate: 0.3
+    stack_lifetime: 90000
+    operating_pressure: 1
+    operating_temperature: 80
+
+  - id: large_alk
+    name: 대규모 ALK
+    description: 50-100 MW 알칼라인 전해조
+    electrolyzer_type: ALK
+    capacity_mw: 50.0
+    efficiency: 62.0
+    capex_per_kw: 800000
+    degradation_rate: 0.3
+    stack_lifetime: 90000
+    operating_pressure: 1
+    operating_temperature: 80
+
+  - id: soec
+    name: SOEC (고온)
+    description: 고온 고체산화물 전해조
+    electrolyzer_type: SOEC
+    capacity_mw: 5.0
+    efficiency: 80.0
+    capex_per_kw: 3000000
+    degradation_rate: 1.0
+    stack_lifetime: 40000
+    operating_pressure: 1
+    operating_temperature: 800
+
+  - id: aem
+    name: AEM
+    description: 음이온 교환막 전해조
+    electrolyzer_type: AEM
+    capacity_mw: 2.0
+    efficiency: 65.0
+    capex_per_kw: 1100000
+    degradation_rate: 0.8
+    stack_lifetime: 60000
+    operating_pressure: 30
+    operating_temperature: 60
