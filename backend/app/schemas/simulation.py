@@ -1,4 +1,16 @@
-"""시뮬레이션 입력 스키마"""
+"""
+시뮬레이션 입력 스키마
+
+기본값은 2024-2025년 한국 시장 기준 리서치 결과를 반영합니다.
+
+주요 참고 수치:
+- 수소 LHV: 33.33 kWh/kg
+- 현재 전해조 효율: 약 67% (실제 소비량 ~50 kWh/kg)
+- PEM 스택 수명: 45,000~80,000시간
+- Alkaline 스택 수명: 60,000~90,000시간
+- PEM 저하율: ~0.5%/년, Alkaline 저하율: ~0.3%/년
+- 스택 교체 비용: PEM ~11% of CAPEX, Alkaline ~15% of CAPEX
+"""
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
@@ -10,16 +22,16 @@ class EquipmentConfig(BaseModel):
         default=10.0, ge=0.1, le=1000, description="전해조 용량 (MW)"
     )
     electrolyzer_efficiency: float = Field(
-        default=65.0, ge=50, le=85, description="전해조 효율 (%)"
+        default=67.0, ge=50, le=85, description="전해조 효율 (%) - 현재 기술 기준 약 67%"
     )
     specific_consumption: float = Field(
-        default=50.0, ge=40, le=70, description="수소 생산 단가 (kWh/kg H2)"
+        default=50.0, ge=40, le=70, description="수소 생산 단가 (kWh/kg H2) - LHV/효율로 자동 계산"
     )
     degradation_rate: float = Field(
-        default=0.5, ge=0, le=3, description="연간 효율 저하율 (%/year)"
+        default=0.5, ge=0, le=3, description="연간 효율 저하율 (%/year) - PEM:0.5%, Alkaline:0.3%"
     )
     stack_lifetime: int = Field(
-        default=80000, ge=40000, le=120000, description="스택 수명 (hours)"
+        default=80000, ge=40000, le=120000, description="스택 수명 (hours) - PEM:80000, Alkaline:90000"
     )
     annual_availability: float = Field(
         default=85.0, ge=50, le=99, description="연간 가동률 (%)"
@@ -30,19 +42,19 @@ class CostConfig(BaseModel):
     """비용 구조 설정"""
 
     capex: float = Field(
-        default=50_000_000_000, ge=0, description="CAPEX (원)"
+        default=50_000_000_000, ge=0, description="CAPEX (원) - 10MW 기준 약 150만원/kW"
     )
     opex_ratio: float = Field(
-        default=2.5, ge=0, le=10, description="OPEX 비율 (% of CAPEX)"
+        default=2.5, ge=0, le=10, description="OPEX 비율 (% of CAPEX) - 업계 표준 2~5%"
     )
     stack_replacement_cost: float = Field(
-        default=15_000_000_000, ge=0, description="스택 교체 비용 (원)"
+        default=5_500_000_000, ge=0, description="스택 교체 비용 (원) - PEM:CAPEX의 11%, Alkaline:15%"
     )
     electricity_source: Literal["PPA", "GRID", "HYBRID"] = Field(
         default="PPA", description="전력 구매 방식"
     )
     ppa_price: Optional[float] = Field(
-        default=80.0, ge=0, le=500, description="PPA 가격 (원/kWh)"
+        default=100.0, ge=0, le=500, description="PPA 가격 (원/kWh) - 한국 산업용 평균 약 100원"
     )
 
 
