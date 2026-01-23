@@ -2,6 +2,10 @@ import { Card, Slider } from '../common';
 import type { EquipmentConfig as EquipmentConfigType } from '../../types';
 import { formatNumber } from '../../utils/formatters';
 
+// 수소 열량 상수 (kWh/kg)
+const HYDROGEN_LHV = 33.33;  // 저위발열량 (Lower Heating Value)
+// const HYDROGEN_HHV = 39.44;  // 고위발열량 (Higher Heating Value) - 참고용
+
 interface Props {
   config: EquipmentConfigType;
   onChange: (config: EquipmentConfigType) => void;
@@ -13,7 +17,9 @@ export default function EquipmentConfig({ config, onChange }: Props) {
   };
 
   // 수소 생산 단가 자동 계산
-  const calculatedSpecificConsumption = (100 / config.electrolyzerEfficiency) * 33.33;
+  // 수식: 실제 소비량 = LHV / 효율 = 33.33 / (효율/100)
+  // 예: 효율 67% → 33.33 / 0.67 ≈ 49.7 kWh/kg
+  const calculatedSpecificConsumption = (100 / config.electrolyzerEfficiency) * HYDROGEN_LHV;
 
   return (
     <Card title="설비 사양" description="전해조 기본 사양을 설정합니다">
