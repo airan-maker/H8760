@@ -56,13 +56,23 @@ def calculate_8760(
     """
     hours = 8760
 
+    # 입력 배열 길이 검증
+    if len(electricity_prices) != hours:
+        raise ValueError(f"electricity_prices must have {hours} values, got {len(electricity_prices)}")
+    if renewable_output is not None and len(renewable_output) != hours:
+        raise ValueError(f"renewable_output must have {hours} values, got {len(renewable_output)}")
+
     # 효율 저하 반영
+    # 연간 저하율: PEM 약 0.5%/년, Alkaline 약 0.3%/년 (문헌 기반)
+    # year=1일 때 저하 없음 (year-1=0이므로 factor=1)
     degradation_factor = (1 - config.degradation_rate / 100) ** (year - 1)
     effective_efficiency = config.electrolyzer_efficiency * degradation_factor / 100
 
     # 가동 가능 시간 마스크 (랜덤하게 가동률 반영)
-    np.random.seed(42 + year)  # 재현성을 위한 시드
-    availability_mask = np.random.random(hours) < (config.annual_availability / 100)
+    # 주의: np.random.seed()를 여기서 호출하면 Monte Carlo 시뮬레이션의 난수 상태를 초기화하므로
+    # 별도의 RandomState 객체를 사용하여 격리된 난수 생성
+    rng = np.random.RandomState(42 + year)  # 격리된 난수 생성기
+    availability_mask = rng.random(hours) < (config.annual_availability / 100)
 
     # 결과 배열 초기화
     h2_production = np.zeros(hours)
