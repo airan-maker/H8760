@@ -273,19 +273,40 @@ def run_full_simulation(
 
 
 def _generate_electricity_prices(base_price: float, scenario: str) -> np.ndarray:
-    """전력 가격 데이터 생성"""
+    """
+    전력 가격 데이터 생성 - 한국 산업용 전기요금 시간대별 구조 반영
+
+    한국 산업용 전기요금 시간대 구분 (2024-2025 기준):
+    - 경부하: 심야 시간대 (23:00~09:00)
+    - 중간부하: 주간 일반 시간대
+    - 최대부하: 피크 시간대 (여름/봄가을: 14~17시, 겨울: 10~12시, 17~20시)
+
+    계절별 차이는 단순화하여 평균 적용
+    """
     prices = np.zeros(8760)
 
     for hour in range(8760):
         hour_of_day = hour % 24
+        day_of_year = hour // 24
 
-        # 시간대별 가격 변동
-        if 9 <= hour_of_day <= 12 or 17 <= hour_of_day <= 21:
-            multiplier = 1.5  # 피크
-        elif 23 <= hour_of_day or hour_of_day <= 6:
-            multiplier = 0.7  # 경부하
+        # 시간대별 가격 변동 (한국 산업용 전기요금 기준)
+        # 최대부하: 가중치 1.5배 (14:00~17:00 기준, 겨울철 일부 다르나 단순화)
+        # 중간부하: 가중치 1.0배 (09:00~14:00, 17:00~22:00)
+        # 경부하: 가중치 0.7배 (22:00~09:00)
+
+        if 14 <= hour_of_day <= 16:  # 최대부하 (14:00~17:00)
+            multiplier = 1.5
+        elif 9 <= hour_of_day <= 13 or 17 <= hour_of_day <= 21:  # 중간부하
+            multiplier = 1.0
+        elif hour_of_day >= 22 or hour_of_day <= 8:  # 경부하 (22:00~09:00)
+            multiplier = 0.7
         else:
-            multiplier = 1.0  # 중간부하
+            multiplier = 1.0  # 기본값
+
+        # 주말/공휴일은 경부하로 처리 (단순화: 토/일만 적용)
+        day_of_week = (day_of_year % 7)
+        if day_of_week >= 5:  # 토요일(5), 일요일(6)
+            multiplier = 0.7  # 공휴일은 전 시간대 경부하
 
         # 시나리오별 조정
         if scenario == "high":
