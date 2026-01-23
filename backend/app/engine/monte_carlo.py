@@ -77,9 +77,12 @@ def run_monte_carlo(
     revenue_results = []
     h2_production_results = []
 
+    # 시드 설정 - 재현성을 위해 시뮬레이션 시작 시 한 번만 설정
+    # 각 반복은 다른 난수 사용
     np.random.seed(42)
 
     for i in range(mc_config.iterations):
+        # 각 반복마다 다른 시드 사용하지 않음 - np.random이 순차적으로 다른 값 생성
         # 변동성 적용
         if price_volatility:
             price_factor = np.random.lognormal(0, mc_config.price_sigma)
@@ -90,15 +93,30 @@ def run_monte_carlo(
             h2_price = base_h2_price
 
         if weather_variability:
-            efficiency_factor = np.random.normal(1, mc_config.efficiency_sigma)
+            # 효율 변동성 - 음수 방지를 위해 클리핑 적용
+            efficiency_factor = np.clip(
+                np.random.normal(1, mc_config.efficiency_sigma),
+                0.8,  # 최소 80% 효율
+                1.2   # 최대 120% 효율
+            )
+            # 가용성 변동성 - 0~100% 범위로 클리핑
+            availability_factor = np.clip(
+                np.random.normal(1, mc_config.weather_sigma),
+                0.7,  # 최소 70%
+                1.1   # 최대 110%
+            )
+            modified_availability = np.clip(
+                energy_config.annual_availability * availability_factor,
+                0.0,
+                99.0  # 최대 가용률 99%
+            )
             modified_config = Energy8760Config(
                 electrolyzer_capacity_mw=energy_config.electrolyzer_capacity_mw,
                 electrolyzer_efficiency=energy_config.electrolyzer_efficiency
                 * efficiency_factor,
                 specific_consumption=energy_config.specific_consumption,
                 degradation_rate=energy_config.degradation_rate,
-                annual_availability=energy_config.annual_availability
-                * np.random.normal(1, mc_config.weather_sigma),
+                annual_availability=modified_availability,
                 price_threshold=energy_config.price_threshold,
             )
         else:
@@ -146,14 +164,19 @@ def run_monte_carlo(
         irr_distribution=irr_dist,
         revenue_distribution=revenue_dist,
         h2_production_distribution=h2_dist,
+        # 백분위수 계산
+        # P50: 중앙값 (50 백분위수)
+        # P90, P99: 보수적 추정 (downside risk) - 하위 10%, 1%
+        # 이는 "90% 신뢰수준에서 이 값 이상의 NPV 달성" 의미
         npv_p50=float(np.percentile(npv_dist, 50)),
-        npv_p90=float(np.percentile(npv_dist, 10)),  # P90은 하위 10%
-        npv_p99=float(np.percentile(npv_dist, 1)),  # P99는 하위 1%
+        npv_p90=float(np.percentile(npv_dist, 10)),  # 하위 10% (보수적 P90)
+        npv_p99=float(np.percentile(npv_dist, 1)),   # 하위 1% (보수적 P99)
         irr_p50=float(np.percentile(irr_dist, 50)),
         irr_p90=float(np.percentile(irr_dist, 10)),
         irr_p99=float(np.percentile(irr_dist, 1)),
-        var_95=float(np.percentile(npv_dist, 5)),
-        var_99=float(np.percentile(npv_dist, 1)),
+        # VaR (Value at Risk) - 손실 리스크
+        var_95=float(np.percentile(npv_dist, 5)),    # 95% VaR
+        var_99=float(np.percentile(npv_dist, 1)),    # 99% VaR
     )
 
 
@@ -191,27 +214,44 @@ def calculate_irr(
     # 초기 추정값
     rate = 0.1
 
+    # 현금흐름 검증 - 부호 변화가 있어야 IRR 계산 가능
+    positive_cf = sum(1 for cf in cashflows if cf > 0)
+    negative_cf = sum(1 for cf in cashflows if cf < 0)
+    if positive_cf == 0 or negative_cf == 0:
+        return None  # IRR 계산 불가
+
     for _ in range(max_iterations):
-        npv = calculate_npv(cashflows, rate)
+        try:
+            npv = calculate_npv(cashflows, rate)
 
-        # NPV의 도함수 계산
-        npv_derivative = 0
-        for t, cf in enumerate(cashflows):
-            if t > 0:
-                npv_derivative -= t * cf / ((1 + rate) ** (t + 1))
+            # NPV의 도함수 계산
+            npv_derivative = 0
+            for t, cf in enumerate(cashflows):
+                if t > 0:
+                    npv_derivative -= t * cf / ((1 + rate) ** (t + 1))
 
-        if abs(npv_derivative) < 1e-10:
-            break
+            if abs(npv_derivative) < 1e-10:
+                break
 
-        # Newton-Raphson 업데이트
-        new_rate = rate - npv / npv_derivative
+            # Newton-Raphson 업데이트
+            new_rate = rate - npv / npv_derivative
 
-        if abs(new_rate - rate) < tolerance:
-            return new_rate * 100  # 백분율로 반환
+            # 발산 방지
+            if new_rate < -0.99:
+                new_rate = -0.99
+            elif new_rate > 10:  # 1000% 초과 방지
+                return None
 
-        rate = new_rate
+            if abs(new_rate - rate) < tolerance:
+                return new_rate * 100  # 백분율로 반환
 
-    return rate * 100 if abs(calculate_npv(cashflows, rate)) < 1e6 else None
+            rate = new_rate
+
+        except (OverflowError, FloatingPointError):
+            return None
+
+    final_npv = calculate_npv(cashflows, rate)
+    return rate * 100 if abs(final_npv) < 1e6 else None
 
 
 def create_histogram(
