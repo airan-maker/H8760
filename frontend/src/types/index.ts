@@ -155,34 +155,43 @@ export interface Preset {
   capexPerKw: number;
 }
 
-// 기본값
+/**
+ * 기본값 (리서치 결과 기반 2024-2025년 한국 시장 기준)
+ *
+ * 주요 상수:
+ * - LHV (저위발열량): 33.33 kWh/kg
+ * - 현재 전해조 실제 소비량: 약 50 kWh/kg (효율 약 67%)
+ * - 스택 수명: PEM 45,000~80,000시간, Alkaline 60,000~90,000시간
+ * - OPEX: CAPEX의 2~5%/년
+ * - 한국 그린수소 가격: 5,200~7,150원/kg (2024-2025)
+ */
 export const defaultSimulationInput: SimulationInput = {
   equipment: {
-    electrolyzerCapacity: 10,
-    electrolyzerEfficiency: 65,
-    specificConsumption: 50,
-    degradationRate: 0.5,
-    stackLifetime: 80000,
-    annualAvailability: 85,
+    electrolyzerCapacity: 10,        // MW
+    electrolyzerEfficiency: 67,      // % (현재 기술 기준 약 67%, 미래 목표 75%)
+    specificConsumption: 50,         // kWh/kg H2 (효율 67% 기준)
+    degradationRate: 0.5,            // %/년 (PEM 기준, Alkaline은 0.3%)
+    stackLifetime: 80000,            // 시간 (PEM 최신 기술 기준)
+    annualAvailability: 85,          // % 가동률
   },
   cost: {
-    capex: 50_000_000_000,
-    opexRatio: 2.5,
-    stackReplacementCost: 15_000_000_000,
+    capex: 50_000_000_000,           // 원 (10MW 기준 약 150만원/kW)
+    opexRatio: 2.5,                  // % of CAPEX (업계 표준 2~5%)
+    stackReplacementCost: 5_500_000_000,  // 원 (CAPEX의 11% - PEM 기준 문헌값)
     electricitySource: 'PPA',
-    ppaPrice: 80,
+    ppaPrice: 100,                   // 원/kWh (한국 산업용 평균 약 100원 기준)
   },
   market: {
-    h2Price: 6000,
-    h2PriceEscalation: 0,
+    h2Price: 6000,                   // 원/kg (한국 그린수소 2024-2025년 범위 내)
+    h2PriceEscalation: 0,            // %/년
     electricityPriceScenario: 'base',
   },
   financial: {
-    discountRate: 8,
-    projectLifetime: 20,
-    debtRatio: 70,
-    interestRate: 5,
-    loanTenor: 15,
+    discountRate: 8,                 // % (한국 수소 프로젝트 WACC 기준)
+    projectLifetime: 20,             // 년
+    debtRatio: 70,                   // %
+    interestRate: 5,                 // %
+    loanTenor: 15,                   // 년
   },
   riskWeights: {
     weatherVariability: true,
@@ -191,7 +200,7 @@ export const defaultSimulationInput: SimulationInput = {
   },
   monteCarlo: {
     iterations: 10000,
-    weatherSigma: 0.1,
-    priceSigma: 0.15,
+    weatherSigma: 0.1,               // 10% 기상 변동성
+    priceSigma: 0.15,                // 15% 가격 변동성
   },
 };
