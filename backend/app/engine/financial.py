@@ -2,10 +2,22 @@
 재무 분석 엔진
 
 NPV, IRR, DSCR, LCOH 등 재무 지표를 계산합니다.
+
+주요 수식 및 상수:
+- LHV (Lower Heating Value): 33.33 kWh/kg (수소의 저위발열량)
+- 스택 교체 비용: PEM 약 11% of CAPEX, Alkaline 약 15% of CAPEX (문헌 기반)
+- 스택 수명: PEM 45,000~80,000시간, Alkaline 60,000~90,000시간
+- OPEX: CAPEX의 2~5%/년 (업계 표준)
 """
 import numpy as np
 from dataclasses import dataclass
 from typing import List, Optional
+
+# 상수 정의
+HYDROGEN_LHV_KWH_KG = 33.33  # 수소 저위발열량 (kWh/kg)
+HYDROGEN_HHV_KWH_KG = 39.44  # 수소 고위발열량 (kWh/kg)
+DEFAULT_STACK_REPLACEMENT_PEM_RATIO = 0.11  # PEM 스택 교체 비용 비율 (CAPEX 대비)
+DEFAULT_STACK_REPLACEMENT_ALK_RATIO = 0.15  # Alkaline 스택 교체 비용 비율 (CAPEX 대비)
 
 
 @dataclass
@@ -86,7 +98,9 @@ def calculate_lcoh(
     annual_electricity_cost: float,
 ) -> float:
     """
-    수소 균등화 비용(LCOH) 계산
+    수소 균등화 비용(LCOH) 계산 - 단순 버전 (평균값 사용)
+
+    LCOH = (총 비용의 현재가치) / (총 수소 생산량의 현재가치)
 
     Args:
         total_capex: 총 CAPEX
@@ -119,12 +133,75 @@ def calculate_lcoh(
     return total_cost_pv / total_h2_pv
 
 
+def calculate_lcoh_accurate(
+    total_capex: float,
+    annual_opex: float,
+    yearly_h2_production: List[float],
+    yearly_electricity_costs: List[float],
+    discount_rate: float,
+    project_lifetime: int,
+    stack_replacement_years: Optional[List[int]] = None,
+    stack_replacement_cost: float = 0,
+) -> float:
+    """
+    수소 균등화 비용(LCOH) 계산 - 정확한 버전 (연도별 데이터 사용)
+
+    LCOH 공식 (NREL/European Hydrogen Observatory 기준):
+    LCOH = Σ(연도별 비용의 현재가치) / Σ(연도별 수소 생산량의 현재가치)
+
+    Args:
+        total_capex: 총 CAPEX
+        annual_opex: 연간 OPEX (CAPEX의 일정 비율)
+        yearly_h2_production: 연도별 수소 생산량 (kg)
+        yearly_electricity_costs: 연도별 전력 비용
+        discount_rate: 할인율 (%)
+        project_lifetime: 프로젝트 기간
+        stack_replacement_years: 스택 교체 연도 목록
+        stack_replacement_cost: 스택 교체 비용
+
+    Returns:
+        float: LCOH (원/kg)
+    """
+    r = discount_rate / 100
+
+    # 총 비용의 현재가치 (CAPEX는 0년차에 발생)
+    total_cost_pv = total_capex
+
+    for year in range(1, project_lifetime + 1):
+        idx = year - 1
+
+        # 연도별 전력 비용
+        elec_cost = yearly_electricity_costs[idx] if idx < len(yearly_electricity_costs) else 0
+
+        # 스택 교체 비용
+        stack_cost = 0
+        if stack_replacement_years and year in stack_replacement_years:
+            stack_cost = stack_replacement_cost
+
+        # 연도별 총 비용
+        year_cost = annual_opex + elec_cost + stack_cost
+        total_cost_pv += year_cost / ((1 + r) ** year)
+
+    # 총 수소 생산량의 현재가치
+    total_h2_pv = 0
+    for year in range(1, project_lifetime + 1):
+        idx = year - 1
+        h2_prod = yearly_h2_production[idx] if idx < len(yearly_h2_production) else 0
+        total_h2_pv += h2_prod / ((1 + r) ** year)
+
+    if total_h2_pv <= 0:
+        return 0
+
+    return total_cost_pv / total_h2_pv
+
+
 def run_financial_analysis(
     config: FinancialConfig,
     yearly_revenues: List[float],
     yearly_electricity_costs: List[float],
     yearly_h2_production: List[float],
     stack_replacement_years: Optional[List[int]] = None,
+    actual_operating_hours_per_year: Optional[float] = None,
 ) -> FinancialResult:
     """
     재무 분석 실행
@@ -135,10 +212,19 @@ def run_financial_analysis(
         yearly_electricity_costs: 연도별 전력 비용
         yearly_h2_production: 연도별 수소 생산량 (kg)
         stack_replacement_years: 스택 교체 연도 목록
+        actual_operating_hours_per_year: 실제 연간 가동시간 (None이면 85% 가정)
 
     Returns:
         FinancialResult: 재무 분석 결과
     """
+    # 입력 검증
+    if config.debt_ratio < 0 or config.debt_ratio > 100:
+        raise ValueError(f"debt_ratio must be 0-100%, got {config.debt_ratio}%")
+    if config.discount_rate < 0:
+        raise ValueError(f"discount_rate must be non-negative, got {config.discount_rate}%")
+    if config.project_lifetime <= 0:
+        raise ValueError(f"project_lifetime must be positive, got {config.project_lifetime}")
+
     # 부채 계산
     debt_amount = config.capex * (config.debt_ratio / 100)
     equity_amount = config.capex - debt_amount
@@ -150,16 +236,24 @@ def run_financial_analysis(
     # OPEX
     annual_opex = config.capex * (config.opex_ratio / 100)
 
-    # 스택 교체 연도 결정
+    # 스택 교체 연도 결정 (운전 시간 기반)
     if stack_replacement_years is None:
-        # 연간 가동 시간 추정 (85% 가동률 가정)
-        annual_hours = 8760 * 0.85
-        years_per_stack = config.stack_lifetime_hours / annual_hours
-        stack_replacement_years = []
-        year = int(years_per_stack)
-        while year < config.project_lifetime:
-            stack_replacement_years.append(year)
-            year += int(years_per_stack)
+        # 연간 가동 시간 추정
+        # 실제 가동 시간이 제공되면 사용, 아니면 85% 가동률 가정
+        if actual_operating_hours_per_year is not None:
+            annual_hours = actual_operating_hours_per_year
+        else:
+            annual_hours = 8760 * 0.85  # 기본 가정: 85% 가동률
+
+        if annual_hours > 0 and config.stack_lifetime_hours > 0:
+            years_per_stack = config.stack_lifetime_hours / annual_hours
+            stack_replacement_years = []
+            cumulative_years = years_per_stack
+            while cumulative_years < config.project_lifetime:
+                stack_replacement_years.append(int(cumulative_years))
+                cumulative_years += years_per_stack
+        else:
+            stack_replacement_years = []
 
     # 현금흐름 계산
     cashflows = [-equity_amount]  # 초기 자기자본 투자
@@ -225,24 +319,16 @@ def run_financial_analysis(
     # 투자회수기간 계산
     payback = _calculate_payback(yearly_cashflows)
 
-    # LCOH 계산
-    avg_h2_production = (
-        sum(yearly_h2_production) / len(yearly_h2_production)
-        if yearly_h2_production
-        else 0
-    )
-    avg_elec_cost = (
-        sum(yearly_electricity_costs) / len(yearly_electricity_costs)
-        if yearly_electricity_costs
-        else 0
-    )
-    lcoh = calculate_lcoh(
+    # LCOH 계산 (연도별 현재가치 기반으로 정확하게 계산)
+    lcoh = calculate_lcoh_accurate(
         config.capex,
         annual_opex,
-        avg_h2_production,
+        yearly_h2_production,
+        yearly_electricity_costs,
         config.discount_rate,
         config.project_lifetime,
-        avg_elec_cost,
+        stack_replacement_years,
+        config.stack_replacement_cost,
     )
 
     # DSCR 집계
