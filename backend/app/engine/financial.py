@@ -349,31 +349,153 @@ def run_financial_analysis(
 def _calculate_irr(
     cashflows: List[float], max_iterations: int = 1000, tolerance: float = 1e-6
 ) -> Optional[float]:
-    """IRR 계산 (Newton-Raphson)"""
-    rate = 0.1
+    """
+    IRR 계산 (Newton-Raphson + Bisection 대체)
 
-    for _ in range(max_iterations):
-        npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cashflows))
+    IRR(Internal Rate of Return)은 NPV = 0이 되는 할인율입니다.
+    Newton-Raphson이 실패하면 Bisection으로 대체합니다.
 
-        npv_derivative = sum(
-            -t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cashflows) if t > 0
-        )
+    Args:
+        cashflows: 현금흐름 리스트 (0번째 = 초기 투자, 음수)
+        max_iterations: 최대 반복 횟수
+        tolerance: 수렴 허용오차
 
-        if abs(npv_derivative) < 1e-10:
-            break
+    Returns:
+        IRR (%), 계산 불가 시 None
+    """
+    # 현금흐름 검증
+    if not cashflows or len(cashflows) < 2:
+        return None
 
-        new_rate = rate - npv / npv_derivative
+    # 부호 변환 횟수 확인 (IRR이 존재하려면 최소 1회 부호 변환 필요)
+    sign_changes = 0
+    for i in range(1, len(cashflows)):
+        if cashflows[i-1] * cashflows[i] < 0:
+            sign_changes += 1
 
-        if abs(new_rate - rate) < tolerance:
-            return new_rate * 100
+    if sign_changes == 0:
+        # 부호 변환이 없으면 IRR이 존재하지 않음
+        return None
 
-        rate = new_rate
+    # 1차 시도: Newton-Raphson
+    irr = _irr_newton_raphson(cashflows, max_iterations, tolerance)
+    if irr is not None:
+        return irr
 
-        # 발산 방지
-        if rate < -0.99 or rate > 10:
+    # 2차 시도: Bisection (Newton-Raphson 실패 시)
+    irr = _irr_bisection(cashflows, max_iterations, tolerance)
+    return irr
+
+
+def _irr_newton_raphson(
+    cashflows: List[float], max_iterations: int = 1000, tolerance: float = 1e-6
+) -> Optional[float]:
+    """Newton-Raphson 방법으로 IRR 계산"""
+    rate = 0.1  # 초기 추정값 10%
+
+    for iteration in range(max_iterations):
+        try:
+            npv = sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cashflows))
+
+            npv_derivative = sum(
+                -t * cf / ((1 + rate) ** (t + 1)) for t, cf in enumerate(cashflows) if t > 0
+            )
+
+            if abs(npv_derivative) < 1e-10:
+                break
+
+            new_rate = rate - npv / npv_derivative
+
+            if abs(new_rate - rate) < tolerance:
+                # 유효 범위 확인 (-99% ~ 1000%)
+                if -0.99 <= new_rate <= 10:
+                    return new_rate * 100
+                else:
+                    return None
+
+            rate = new_rate
+
+            # 발산 방지
+            if rate < -0.99 or rate > 10:
+                return None
+
+        except (OverflowError, FloatingPointError, ZeroDivisionError):
             return None
 
-    return rate * 100
+    # 수렴했으나 tolerance 미달
+    if -0.99 <= rate <= 10:
+        return rate * 100
+    return None
+
+
+def _irr_bisection(
+    cashflows: List[float],
+    max_iterations: int = 1000,
+    tolerance: float = 1e-6,
+    low: float = -0.99,
+    high: float = 5.0,
+) -> Optional[float]:
+    """
+    이분법(Bisection)으로 IRR 계산
+
+    Newton-Raphson이 수렴하지 않을 때 대체 방법으로 사용.
+    더 느리지만 수렴이 보장됩니다.
+
+    Args:
+        cashflows: 현금흐름 리스트
+        max_iterations: 최대 반복 횟수
+        tolerance: 수렴 허용오차
+        low: 탐색 하한 (-99%)
+        high: 탐색 상한 (500%)
+
+    Returns:
+        IRR (%), 계산 불가 시 None
+    """
+    def npv_at_rate(rate: float) -> float:
+        """주어진 할인율에서 NPV 계산"""
+        try:
+            return sum(cf / ((1 + rate) ** t) for t, cf in enumerate(cashflows))
+        except (OverflowError, FloatingPointError):
+            return float('inf') if rate < 0 else float('-inf')
+
+    # 초기 경계에서 NPV 계산
+    npv_low = npv_at_rate(low)
+    npv_high = npv_at_rate(high)
+
+    # 부호가 같으면 IRR이 범위 밖에 있음
+    if npv_low * npv_high > 0:
+        # 범위 확장 시도
+        if npv_low > 0 and npv_high > 0:
+            # 둘 다 양수 → 더 높은 할인율 필요
+            high = 10.0
+            npv_high = npv_at_rate(high)
+        elif npv_low < 0 and npv_high < 0:
+            # 둘 다 음수 → 더 낮은 할인율 필요 (투자 손실)
+            return None
+
+        # 여전히 부호가 같으면 IRR 없음
+        if npv_low * npv_high > 0:
+            return None
+
+    # 이분법 실행
+    for iteration in range(max_iterations):
+        mid = (low + high) / 2
+        npv_mid = npv_at_rate(mid)
+
+        # 수렴 확인
+        if abs(npv_mid) < tolerance or abs(high - low) < tolerance:
+            return mid * 100
+
+        # 범위 축소
+        if npv_low * npv_mid < 0:
+            high = mid
+            npv_high = npv_mid
+        else:
+            low = mid
+            npv_low = npv_mid
+
+    # 최대 반복 후 중간값 반환
+    return ((low + high) / 2) * 100
 
 
 def _calculate_payback(yearly_cashflows: List[YearlyCashflow]) -> float:

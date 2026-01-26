@@ -1,9 +1,21 @@
 """시뮬레이션 결과 스키마"""
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+
+from app.core.case_converter import snake_to_camel
 
 
-class PercentileValue(BaseModel):
+# CamelCase 별칭 자동 생성을 위한 기본 설정
+class CamelCaseModel(BaseModel):
+    """camelCase 별칭을 자동 생성하는 기본 모델"""
+
+    model_config = ConfigDict(
+        alias_generator=snake_to_camel,
+        populate_by_name=True,  # snake_case와 camelCase 모두 허용
+    )
+
+
+class PercentileValue(CamelCaseModel):
     """백분위수 값"""
 
     p50: float
@@ -11,14 +23,14 @@ class PercentileValue(BaseModel):
     p99: float
 
 
-class DSCRMetrics(BaseModel):
+class DSCRMetrics(CamelCaseModel):
     """DSCR 지표"""
 
     min: float
     avg: float
 
 
-class KPIs(BaseModel):
+class KPIs(CamelCaseModel):
     """핵심 성과 지표"""
 
     npv: PercentileValue = Field(description="순현재가치 (원)")
@@ -30,14 +42,14 @@ class KPIs(BaseModel):
     lcoh: float = Field(description="수소 균등화 비용 (원/kg)")
 
 
-class HistogramBin(BaseModel):
+class HistogramBin(CamelCaseModel):
     """히스토그램 빈"""
 
     bin: float
     count: int
 
 
-class HourlyData(BaseModel):
+class HourlyData(CamelCaseModel):
     """시간별 데이터"""
 
     production: List[float] = Field(description="시간별 수소 생산량 (kg)")
@@ -46,14 +58,14 @@ class HourlyData(BaseModel):
     operating_hours: List[int] = Field(description="가동 여부 (0/1)")
 
 
-class Distributions(BaseModel):
+class Distributions(CamelCaseModel):
     """확률 분포"""
 
     npv_histogram: List[HistogramBin] = Field(description="NPV 히스토그램")
     revenue_histogram: List[HistogramBin] = Field(description="수익 히스토그램")
 
 
-class SensitivityItem(BaseModel):
+class SensitivityItem(CamelCaseModel):
     """민감도 분석 항목"""
 
     variable: str = Field(description="변수명")
@@ -64,14 +76,14 @@ class SensitivityItem(BaseModel):
     high_change_pct: float = Field(description="상위 변동 비율 (%)")
 
 
-class RiskWaterfallItem(BaseModel):
+class RiskWaterfallItem(CamelCaseModel):
     """리스크 폭포수 항목"""
 
     factor: str = Field(description="리스크 요인")
     impact: float = Field(description="NPV 영향 (원)")
 
 
-class YearlyCashflow(BaseModel):
+class YearlyCashflow(CamelCaseModel):
     """연간 현금흐름"""
 
     year: int
@@ -82,7 +94,7 @@ class YearlyCashflow(BaseModel):
     cumulative_cashflow: float
 
 
-class SimulationResult(BaseModel):
+class SimulationResult(CamelCaseModel):
     """전체 시뮬레이션 결과"""
 
     simulation_id: str = Field(description="시뮬레이션 ID")
@@ -95,7 +107,7 @@ class SimulationResult(BaseModel):
     yearly_cashflow: List[YearlyCashflow] = Field(description="연간 현금흐름")
 
 
-class SimulationStatus(BaseModel):
+class SimulationStatus(CamelCaseModel):
     """시뮬레이션 상태"""
 
     simulation_id: str
@@ -104,7 +116,7 @@ class SimulationStatus(BaseModel):
     message: Optional[str] = None
 
 
-class ScenarioComparison(BaseModel):
+class ScenarioComparison(CamelCaseModel):
     """시나리오 비교 결과"""
 
     scenarios: List[str]

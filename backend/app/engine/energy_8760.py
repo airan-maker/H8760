@@ -74,47 +74,42 @@ def calculate_8760(
     rng = np.random.RandomState(42 + year)  # 격리된 난수 생성기
     availability_mask = rng.random(hours) < (config.annual_availability / 100)
 
-    # 결과 배열 초기화
-    h2_production = np.zeros(hours)
-    operating_power = np.zeros(hours)
-    hourly_revenue = np.zeros(hours)
-    hourly_cost = np.zeros(hours)
-    operating_hours = np.zeros(hours, dtype=int)
-
     # 전해조 용량 (kW로 변환)
     capacity_kw = config.electrolyzer_capacity_mw * 1000
 
-    for hour in range(hours):
-        # 가동 가능 여부 확인
-        if not availability_mask[hour]:
-            continue
+    # === 벡터 연산으로 최적화 (for 루프 제거) ===
 
-        # 전력 가용량 결정
-        if renewable_output is not None:
-            available_power_mw = renewable_output[hour]
-        else:
-            # 계통 전력 사용 시 전해조 용량만큼 가용
-            available_power_mw = config.electrolyzer_capacity_mw
+    # 1. 전력 가용량 결정 (MW)
+    if renewable_output is not None:
+        available_power_mw = renewable_output.copy()
+    else:
+        # 계통 전력 사용 시 전해조 용량만큼 가용
+        available_power_mw = np.full(hours, config.electrolyzer_capacity_mw)
 
-        # 전력 가격 기반 가동 결정
-        if electricity_prices[hour] <= config.price_threshold:
-            # 가동 전력 결정 (가용량과 용량 중 작은 값)
-            op_power_mw = min(available_power_mw, config.electrolyzer_capacity_mw)
-            op_power_kw = op_power_mw * 1000
+    # 2. 가동 전력 결정 (가용량과 용량 중 작은 값)
+    operating_power_mw = np.minimum(available_power_mw, config.electrolyzer_capacity_mw)
+    operating_power_kw = operating_power_mw * 1000
 
-            # 수소 생산량 계산
-            h2_kg = (op_power_kw * effective_efficiency) / config.specific_consumption
+    # 3. 가동 조건 마스크 (가용성 AND 가격 임계값 이하)
+    price_mask = electricity_prices <= config.price_threshold
+    operating_mask = availability_mask & price_mask
 
-            # 수익 및 비용 계산
-            revenue = h2_kg * h2_price
-            cost = op_power_kw * electricity_prices[hour]
+    # 4. 수소 생산량 계산 (kg)
+    h2_production = np.where(
+        operating_mask,
+        (operating_power_kw * effective_efficiency) / config.specific_consumption,
+        0.0
+    )
 
-            # 결과 저장
-            h2_production[hour] = h2_kg
-            operating_power[hour] = op_power_mw
-            hourly_revenue[hour] = revenue
-            hourly_cost[hour] = cost
-            operating_hours[hour] = 1
+    # 5. 수익 및 비용 계산
+    hourly_revenue = np.where(operating_mask, h2_production * h2_price, 0.0)
+    hourly_cost = np.where(operating_mask, operating_power_kw * electricity_prices, 0.0)
+
+    # 6. 가동 시간 (0/1)
+    operating_hours = operating_mask.astype(int)
+
+    # 7. 가동 전력 (비가동 시 0)
+    operating_power = np.where(operating_mask, operating_power_mw, 0.0)
 
     # 집계 결과
     total_h2 = np.sum(h2_production)

@@ -38,6 +38,27 @@ class EquipmentConfig(BaseModel):
     )
 
 
+class RenewableConfig(BaseModel):
+    """재생에너지 연계 설정"""
+
+    enabled: bool = Field(
+        default=False, description="재생에너지 연계 사용 여부"
+    )
+    source_type: Literal["solar", "wind", "hybrid"] = Field(
+        default="solar", description="재생에너지 유형"
+    )
+    capacity_mw: float = Field(
+        default=15.0, ge=0, le=1000, description="재생에너지 설비 용량 (MW)"
+    )
+    capacity_factor: float = Field(
+        default=15.0, ge=5, le=60, description="설비이용률 (%) - 태양광:15%, 풍력:25%"
+    )
+    profile_type: Literal["typical", "custom"] = Field(
+        default="typical", description="출력 프로파일 유형"
+    )
+    # custom_profile은 8760개 값이 필요하나 API 간소화를 위해 typical 프로파일 사용
+
+
 class CostConfig(BaseModel):
     """비용 구조 설정"""
 
@@ -50,8 +71,8 @@ class CostConfig(BaseModel):
     stack_replacement_cost: float = Field(
         default=5_500_000_000, ge=0, description="스택 교체 비용 (원) - PEM:CAPEX의 11%, Alkaline:15%"
     )
-    electricity_source: Literal["PPA", "GRID", "HYBRID"] = Field(
-        default="PPA", description="전력 구매 방식"
+    electricity_source: Literal["PPA", "GRID", "HYBRID", "RENEWABLE"] = Field(
+        default="PPA", description="전력 구매 방식 - RENEWABLE: 재생에너지 직접 연계"
     )
     ppa_price: Optional[float] = Field(
         default=100.0, ge=0, le=500, description="PPA 가격 (원/kWh) - 한국 산업용 평균 약 100원"
@@ -129,6 +150,7 @@ class SimulationInput(BaseModel):
     financial: FinancialConfig = Field(default_factory=FinancialConfig)
     risk_weights: RiskWeightsConfig = Field(default_factory=RiskWeightsConfig)
     monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig)
+    renewable: RenewableConfig = Field(default_factory=RenewableConfig)
 
 
 class SimulationConfig(BaseModel):
