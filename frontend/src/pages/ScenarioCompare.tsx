@@ -147,9 +147,10 @@ export default function ScenarioCompare() {
   const bestLcoh = selectedScenarios.length > 0 ? Math.min(...selectedScenarios.map((s) => s.lcoh)) : 0;
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+    <div className="max-w-7xl mx-auto">
+      {/* 헤더 */}
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-4">
           <div className="p-2 bg-gradient-to-br from-hydrogen-500 to-primary-500 rounded-xl shadow-lg shadow-hydrogen-500/20">
             <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -165,16 +166,31 @@ export default function ScenarioCompare() {
             </p>
           </div>
         </div>
-        <Link to="/config">
-          <Button variant="gradient" icon={
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+
+        {/* 액션 탭 */}
+        <div className="flex items-center gap-1 p-1.5 bg-dark-50 rounded-2xl">
+          <Link
+            to="/config"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
+          >
+            <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-          }>
             새 시나리오
-          </Button>
-        </Link>
+          </Link>
+          <Link
+            to="/dashboard"
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
+          >
+            <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            대시보드
+          </Link>
+        </div>
       </div>
+
+      <div className="space-y-8">
 
       {/* 안내 메시지 (저장된 시나리오가 없을 때) */}
       {isShowingDemo && (
@@ -555,6 +571,7 @@ export default function ScenarioCompare() {
           </div>
         </Card>
       )}
+      </div>
 
       {/* 삭제 확인 모달 */}
       {showDeleteConfirm && (
