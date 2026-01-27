@@ -27,7 +27,7 @@ def test_hydrogen_lhv():
     print(f"  코드 상수: {HYDROGEN_LHV_KWH_KG} kWh/kg")
     print(f"  예상 값: {expected_lhv} kWh/kg")
     assert abs(HYDROGEN_LHV_KWH_KG - expected_lhv) < 0.01, "LHV 값이 올바르지 않습니다"
-    print("  ✓ 검증 통과")
+    print("  [OK] 검증 통과")
 
     # 효율 계산 예시
     efficiency = 67  # %
@@ -57,7 +57,7 @@ def test_electricity_prices():
     saturday_start = 5 * 24  # 5일 후 = 토요일
     print(f"\n  주말 가격 (토요일 14시): {prices[saturday_start + 14]:.1f}원/kWh (경부하 적용)")
 
-    print("  ✓ 전력 가격 생성 완료")
+    print("  [OK] 전력 가격 생성 완료")
     print()
 
 
@@ -112,7 +112,7 @@ def test_energy_8760():
     degradation = (1 - result_y10.total_h2_production / result.total_h2_production) * 100
     print(f"    1년차 대비 감소율: {degradation:.2f}%")
 
-    print("  ✓ 8760 계산 완료")
+    print("  [OK] 8760 계산 완료")
     print()
 
     return result
@@ -170,7 +170,7 @@ def test_financial_analysis(energy_result):
     print(f"    계산된 LCOH: {result.lcoh:,.0f}원/kg")
     print(f"    한국 그린수소 시장 범위: 5,200~7,150원/kg (2024-2025)")
 
-    print("  ✓ 재무 분석 완료")
+    print("  [OK] 재무 분석 완료")
     print()
 
     return result
@@ -229,7 +229,7 @@ def test_monte_carlo():
     print(f"\n  NPV 표준편차: {npv_std/1e9:.2f}억원")
     print(f"  NPV 분포 범위: {np.min(result.npv_distribution)/1e9:.2f} ~ {np.max(result.npv_distribution)/1e9:.2f}억원")
 
-    print("  ✓ 몬테카를로 시뮬레이션 완료")
+    print("  [OK] 몬테카를로 시뮬레이션 완료")
     print()
 
 
@@ -253,9 +253,9 @@ def test_input_validation():
     try:
         wrong_prices = np.zeros(100)  # 8760개여야 하는데 100개
         calculate_8760(config, wrong_prices)
-        print("  ✗ 배열 길이 검증 실패 (예외가 발생해야 함)")
+        print("  [FAIL] 배열 길이 검증 실패 (예외가 발생해야 함)")
     except ValueError as e:
-        print(f"  ✓ 배열 길이 검증 통과: {e}")
+        print(f"  [OK] 배열 길이 검증 통과: {e}")
 
     # 부채비율 검증
     fin_config = FinancialConfig(
@@ -278,9 +278,9 @@ def test_input_validation():
             yearly_electricity_costs=[5e8] * 20,
             yearly_h2_production=[1e6] * 20,
         )
-        print("  ✓ 정상 재무 분석 통과")
+        print("  [OK] 정상 재무 분석 통과")
     except Exception as e:
-        print(f"  ✗ 정상 재무 분석 실패: {e}")
+        print(f"  [FAIL] 정상 재무 분석 실패: {e}")
 
     print()
 
@@ -300,11 +300,11 @@ def main():
         test_input_validation()
 
         print("=" * 60)
-        print("✓ 모든 테스트 통과!")
+        print("[OK] 모든 테스트 통과!")
         print("=" * 60)
 
     except Exception as e:
-        print(f"\n✗ 테스트 실패: {e}")
+        print(f"\n[FAIL] 테스트 실패: {e}")
         import traceback
         traceback.print_exc()
         return 1

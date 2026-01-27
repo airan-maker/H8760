@@ -2,5 +2,6 @@ export { default as EquipmentConfig } from './EquipmentConfig';
 export { default as CostConfig } from './CostConfig';
 export { default as MarketConfig } from './MarketConfig';
 export { default as FinancialConfig } from './FinancialConfig';
+export { default as IncentivesConfig } from './IncentivesConfig';
 export { default as RiskWeightConfig } from './RiskWeightConfig';
 export { default as PresetSelector } from './PresetSelector';

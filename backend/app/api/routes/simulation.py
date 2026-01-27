@@ -14,8 +14,8 @@ router = APIRouter()
 simulations_db: dict[str, dict] = {}
 
 
-@router.post("/run", response_model=SimulationResult)
-async def run_simulation(config: SimulationConfig) -> SimulationResult:
+@router.post("/run")
+async def run_simulation(config: SimulationConfig):
     """시뮬레이션 실행"""
     simulation_id = str(uuid.uuid4())
 
@@ -29,10 +29,11 @@ async def run_simulation(config: SimulationConfig) -> SimulationResult:
     if config.save_result:
         simulations_db[simulation_id] = {
             "config": config.model_dump(),
-            "result": result.model_dump(),
+            "result": result.model_dump(by_alias=True),
         }
 
-    return result
+    # camelCase로 직렬화하여 반환
+    return result.model_dump(by_alias=True)
 
 
 @router.get("/{simulation_id}/status", response_model=SimulationStatus)

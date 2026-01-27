@@ -75,15 +75,15 @@ export default function Heatmap8760({
           {/* 히트맵 */}
           <div className="flex">
             {/* 월 라벨 */}
-            <div className="w-12 flex flex-col">
+            <div className="w-12 relative" style={{ height: '300px' }}>
               {months.map((month, i) => {
                 const daysBefore = monthDays.slice(0, i).reduce((a, b) => a + b, 0);
                 const top = (daysBefore / 365) * 100;
                 return (
                   <div
                     key={month}
-                    className="text-xs text-gray-500 absolute"
-                    style={{ top: `${top}%` }}
+                    className="text-xs text-gray-500 absolute right-2"
+                    style={{ top: `${top}%`, transform: 'translateY(-50%)' }}
                   >
                     {month}
                   </div>
@@ -92,7 +92,7 @@ export default function Heatmap8760({
             </div>
 
             {/* 히트맵 그리드 */}
-            <div className="flex-1 relative" style={{ height: '300px' }}>
+            <div className="flex-1" style={{ height: '300px' }}>
               <svg width="100%" height="100%" viewBox="0 0 24 365" preserveAspectRatio="none">
                 {heatmapData.map((dayData, day) => (
                   dayData.map((value, hour) => (
@@ -144,17 +144,6 @@ export default function Heatmap8760({
             {(data.reduce((a, b) => a + b, 0) / data.length).toFixed(1)} kg/h
           </div>
         </div>
-      </div>
-
-      {/* 계산 로직 설명 (임시) */}
-      <div className="mt-4 p-3 bg-teal-50 border border-teal-200 rounded-lg text-xs text-teal-700">
-        <p className="font-semibold mb-1">8760 시간별 계산 (energy_8760.py)</p>
-        <p>- 시간별 발전량 = 설비용량 × 이용률(t) × 효율</p>
-        <p>- 시간별 수소생산 = 전력(kW) / 비소비량(kWh/kg)</p>
-        <p>- 가동 판단: 전력가격(t) &lt; 기준가격 일 때 운전</p>
-        <p>- 효율 보정: 부분부하 효율곡선 적용</p>
-        <p className="mt-1">총 8760시간 (365일 × 24시간) 시뮬레이션</p>
-        <p className="text-teal-600">* 기상데이터: 태양광/풍력 시간대별 이용률 반영</p>
       </div>
     </Card>
   );

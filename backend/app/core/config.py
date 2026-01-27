@@ -1,7 +1,7 @@
 """
 설정 관리 모듈
 """
-from typing import List
+from typing import List, Optional
 from pydantic_settings import BaseSettings
 
 
@@ -21,10 +21,17 @@ class Settings(BaseSettings):
     # Redis 설정
     REDIS_URL: str = "redis://localhost:6379"
 
+    # Firebase 설정
+    FIREBASE_PROJECT_ID: Optional[str] = None
+
     # 시뮬레이션 기본값
     DEFAULT_MONTE_CARLO_ITERATIONS: int = 10000
     DEFAULT_PROJECT_LIFETIME: int = 20
     DEFAULT_DISCOUNT_RATE: float = 8.0
+
+    # Claude API 설정
+    ANTHROPIC_API_KEY: Optional[str] = None
+    CLAUDE_MODEL: str = "claude-sonnet-4-20250514"
 
     class Config:
         env_file = ".env"

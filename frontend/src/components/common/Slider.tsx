@@ -36,9 +36,10 @@ export default function Slider({
         </span>
       </div>
 
-      <div className="relative">
-        {/* Track background with gradient fill */}
-        <div className="absolute inset-0 h-2 top-1/2 -translate-y-1/2 rounded-full bg-dark-100 overflow-hidden">
+      <div className="relative h-6 flex items-center">
+        {/* Track background */}
+        <div className="absolute left-0 right-0 h-2 rounded-full bg-dark-100 overflow-hidden">
+          {/* Filled track */}
           <div
             className="h-full bg-gradient-to-r from-hydrogen-400 to-hydrogen-500 rounded-full transition-all duration-150"
             style={{ width: `${percentage}%` }}
@@ -52,10 +53,7 @@ export default function Slider({
           step={step}
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
-          className="relative w-full h-2 bg-transparent appearance-none cursor-pointer z-10"
-          style={{
-            WebkitAppearance: 'none',
-          }}
+          className="slider-input relative w-full h-2 bg-transparent appearance-none cursor-pointer z-10"
         />
       </div>
 

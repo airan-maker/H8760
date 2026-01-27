@@ -12,7 +12,7 @@ import type { HistogramBin } from '../../types';
 import { formatCurrency, formatNumber } from '../../utils/formatters';
 
 interface Props {
-  title: string;
+  title?: string;
   data: HistogramBin[];
   p50?: number;
   p90?: number;
@@ -22,7 +22,7 @@ interface Props {
 }
 
 export default function DistributionHistogram({
-  title,
+  title = 'NPV 분포',
   data,
   p50,
   p90,
@@ -114,13 +114,18 @@ export default function DistributionHistogram({
         )}
       </div>
 
-      {/* 계산 로직 설명 (임시) */}
-      <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
-        <p className="font-semibold mb-1">몬테카를로 시뮬레이션 (monte_carlo.py)</p>
-        <p>- 반복 횟수: 10,000회 (설정 가능)</p>
-        <p>- 가격 변동성: 로그정규분포 (sigma=0.15)</p>
-        <p>- 기상 변동성: 정규분포 (sigma=0.1)</p>
-        <p className="mt-1">P50=중앙값, P90=90% 신뢰, P99=99% 신뢰</p>
+      {/* 계산 로직 설명 */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 space-y-1">
+        <p className="font-semibold mb-2 text-gray-600">몬테카를로 시뮬레이션 (monte_carlo.py)</p>
+        <p>• 반복 횟수: 10,000회 (설정 가능)</p>
+        <p>• 가격 변동성: 로그정규분포 (σ=0.15)</p>
+        <p>• 기상 변동성: 정규분포 (σ=0.1)</p>
+        <p>• 효율 저하: 연간 0.5% 감소 반영</p>
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <p className="font-medium text-gray-600">P50 = 중앙값 (50번째 백분위)</p>
+          <p className="font-medium text-gray-600">P90 = 90번째 백분위 (보수적 추정)</p>
+          <p className="font-medium text-gray-600">P99 = 99번째 백분위 (극단적 시나리오)</p>
+        </div>
       </div>
     </Card>
   );

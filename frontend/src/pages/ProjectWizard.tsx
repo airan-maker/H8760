@@ -2,9 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, Button } from '../components/common';
 import { projectsApi } from '../services/api';
+import { useSimulationContext } from '../contexts/SimulationContext';
 
 export default function ProjectWizard() {
   const navigate = useNavigate();
+  const { setCurrentProject, resetSimulation, savedScenarios } = useSimulationContext();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -18,10 +20,26 @@ export default function ProjectWizard() {
     setLoading(true);
     try {
       const project = await projectsApi.create(formData);
+      // Context에 프로젝트 정보 저장
+      setCurrentProject({
+        id: project.id,
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+      });
+      resetSimulation();
       navigate(`/config/${project.id}`);
     } catch (error) {
       console.error('Failed to create project:', error);
-      // 에러 시에도 config 페이지로 이동 (데모 목적)
+      // 에러 시에도 Context에 저장하고 config 페이지로 이동
+      const tempId = `temp_${Date.now()}`;
+      setCurrentProject({
+        id: tempId,
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+      });
+      resetSimulation();
       navigate('/config');
     } finally {
       setLoading(false);
@@ -29,11 +47,17 @@ export default function ProjectWizard() {
   };
 
   const handleQuickStart = () => {
+    setCurrentProject({
+      id: `quick_${Date.now()}`,
+      name: '빠른 시작 프로젝트',
+      description: '빠른 시작으로 생성된 프로젝트',
+    });
+    resetSimulation();
     navigate('/config');
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-7xl mx-auto">
       {/* Hero Section */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-dark-900 via-dark-800 to-dark-900 p-8 lg:p-12 mb-8">
         <div className="absolute inset-0 bg-hero-pattern opacity-30"></div>
@@ -42,11 +66,6 @@ export default function ProjectWizard() {
 
         <div className="relative z-10">
           <div className="flex items-center gap-3 mb-4">
-            <div className="p-3 bg-gradient-to-br from-hydrogen-500 to-primary-500 rounded-2xl shadow-lg shadow-hydrogen-500/30">
-              <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
-            </div>
             <span className="px-3 py-1 bg-hydrogen-500/20 text-hydrogen-400 text-xs font-semibold rounded-full">
               v1.0
             </span>
@@ -54,10 +73,10 @@ export default function ProjectWizard() {
 
           <h1 className="text-3xl lg:text-4xl font-bold text-white mb-3">
             수소 전해조<br />
-            <span className="gradient-text">최적화 플랫폼</span>
+            <span className="gradient-text">운영 전략 및 경제성 분석 플랫폼</span>
           </h1>
-          <p className="text-dark-300 text-lg max-w-xl mb-8">
-            실시간 시뮬레이션으로 수소 생산 시설의 경제성을 분석하고 최적의 운영 전략을 수립하세요.
+          <p className="text-dark-300 text-lg max-w-full mb-8">
+            실시간 시뮬레이션으로 수소 생산 시설의 경제성을 분석하고 최적의 운영 전략 및 자금 조달 계획을 수립하세요.
           </p>
 
           <div className="flex flex-wrap gap-4">
@@ -175,31 +194,62 @@ export default function ProjectWizard() {
         </Card>
       </div>
 
-      {/* 최근 프로젝트 */}
-      <Card className="mt-8" variant="bordered" title="최근 프로젝트" icon={
+      {/* 저장된 시나리오 */}
+      <Card className="mt-8" variant="bordered" title="저장된 시나리오" icon={
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
         </svg>
       }>
-        <div className="text-center py-12">
-          <div className="w-16 h-16 bg-dark-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <svg
-              className="w-8 h-8 text-dark-300"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
+        {savedScenarios.length > 0 ? (
+          <div className="space-y-3">
+            {savedScenarios.slice(0, 3).map((scenario) => (
+              <div
+                key={scenario.id}
+                className="flex items-center justify-between p-4 bg-dark-50 rounded-xl hover:bg-dark-100 transition-colors cursor-pointer"
+                onClick={() => navigate('/compare')}
+              >
+                <div>
+                  <h4 className="font-medium text-dark-800">{scenario.name}</h4>
+                  <p className="text-sm text-dark-500">{scenario.description}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-semibold text-hydrogen-600">
+                    {(scenario.result.kpis.npv.p50 / 100000000).toFixed(0)}억원
+                  </p>
+                  <p className="text-xs text-dark-400">NPV (P50)</p>
+                </div>
+              </div>
+            ))}
+            {savedScenarios.length > 3 && (
+              <button
+                onClick={() => navigate('/compare')}
+                className="w-full py-3 text-center text-sm text-hydrogen-600 hover:text-hydrogen-700 font-medium"
+              >
+                + {savedScenarios.length - 3}개 더 보기
+              </button>
+            )}
           </div>
-          <p className="text-dark-600 font-medium mb-1">저장된 프로젝트가 없습니다</p>
-          <p className="text-sm text-dark-400">새 프로젝트를 생성하여 시작하세요</p>
-        </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-dark-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg
+                className="w-8 h-8 text-dark-300"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+            <p className="text-dark-600 font-medium mb-1">저장된 시나리오가 없습니다</p>
+            <p className="text-sm text-dark-400">시뮬레이션을 실행하고 시나리오를 저장해보세요</p>
+          </div>
+        )}
       </Card>
     </div>
   );

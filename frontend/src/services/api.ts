@@ -8,6 +8,7 @@ import type {
   SimulationResult,
   Preset,
 } from '../types';
+import { auth } from '../config/firebase';
 
 const api = axios.create({
   baseURL: '/api',
@@ -15,6 +16,32 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+
+// 인증 헤더 인터셉터
+api.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    } catch (error) {
+      console.error('토큰 가져오기 실패:', error);
+    }
+  }
+  return config;
+});
+
+// 응답 에러 인터셉터
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // 인증 실패 시 로그인 페이지로 리디렉션 (선택적)
+      console.error('인증 실패');
+    }
+    return Promise.reject(error);
+  }
+);
 
 // 프로젝트 API
 export const projectsApi = {
@@ -100,54 +127,61 @@ export const simulationApi = {
           weather_sigma: input.monteCarlo.weatherSigma,
           price_sigma: input.monteCarlo.priceSigma,
         },
+        renewable: {
+          enabled: false,
+          source_type: "solar",
+          capacity_mw: 15.0,
+          capacity_factor: 15.0,
+          profile_type: "typical",
+        },
       },
       save_result: true,
     };
 
     const response = await api.post('/simulation/run', payload);
 
-    // 카멜 케이스로 변환
+    // 백엔드가 camelCase로 응답하므로 직접 매핑
     const data = response.data;
     return {
-      simulationId: data.simulation_id,
+      simulationId: data.simulationId,
       status: data.status,
       kpis: {
         npv: data.kpis.npv,
         irr: data.kpis.irr,
         dscr: data.kpis.dscr,
-        paybackPeriod: data.kpis.payback_period,
-        var95: data.kpis.var_95,
-        annualH2Production: data.kpis.annual_h2_production,
+        paybackPeriod: data.kpis.paybackPeriod,
+        var95: data.kpis.var95,
+        annualH2Production: data.kpis.annualH2Production,
         lcoh: data.kpis.lcoh,
       },
-      hourlyData: data.hourly_data
+      hourlyData: data.hourlyData
         ? {
-            production: data.hourly_data.production,
-            revenue: data.hourly_data.revenue,
-            electricityCost: data.hourly_data.electricity_cost,
-            operatingHours: data.hourly_data.operating_hours,
+            production: data.hourlyData.production,
+            revenue: data.hourlyData.revenue,
+            electricityCost: data.hourlyData.electricityCost,
+            operatingHours: data.hourlyData.operatingHours,
           }
         : undefined,
       distributions: {
-        npvHistogram: data.distributions.npv_histogram,
-        revenueHistogram: data.distributions.revenue_histogram,
+        npvHistogram: data.distributions.npvHistogram,
+        revenueHistogram: data.distributions.revenueHistogram,
       },
       sensitivity: data.sensitivity.map((s: Record<string, unknown>) => ({
         variable: s.variable,
-        baseCase: s.base_case,
-        lowCase: s.low_case,
-        highCase: s.high_case,
-        lowChangePct: s.low_change_pct,
-        highChangePct: s.high_change_pct,
+        baseCase: s.baseCase,
+        lowCase: s.lowCase,
+        highCase: s.highCase,
+        lowChangePct: s.lowChangePct,
+        highChangePct: s.highChangePct,
       })),
-      riskWaterfall: data.risk_waterfall,
-      yearlyCashflow: data.yearly_cashflow.map((c: Record<string, unknown>) => ({
+      riskWaterfall: data.riskWaterfall,
+      yearlyCashflow: data.yearlyCashflow.map((c: Record<string, unknown>) => ({
         year: c.year,
         revenue: c.revenue,
         opex: c.opex,
-        debtService: c.debt_service,
-        netCashflow: c.net_cashflow,
-        cumulativeCashflow: c.cumulative_cashflow,
+        debtService: c.debtService,
+        netCashflow: c.netCashflow,
+        cumulativeCashflow: c.cumulativeCashflow,
       })),
     };
   },
@@ -185,6 +219,117 @@ export const dataApi = {
   getElectricityPrices: async (scenario: string = 'base') => {
     const response = await api.get(`/data/electricity-prices/${scenario}`);
     return response.data;
+  },
+};
+
+// 인증 API
+export const authApi = {
+  // 현재 사용자 정보 조회
+  getMe: async () => {
+    const response = await api.get('/auth/me');
+    return response.data;
+  },
+};
+
+// 시나리오 타입 정의
+export interface ScenarioData {
+  id: string;
+  name: string;
+  description: string;
+  inputConfig: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// 시나리오 API
+export const scenariosApi = {
+  // 내 시나리오 목록 조회
+  list: async (): Promise<ScenarioData[]> => {
+    const response = await api.get('/scenarios');
+    return response.data.map((s: Record<string, unknown>) => ({
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      inputConfig: s.input_config,
+      result: s.result,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+    }));
+  },
+
+  // 시나리오 상세 조회
+  get: async (id: string): Promise<ScenarioData> => {
+    const response = await api.get(`/scenarios/${id}`);
+    const s = response.data;
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      inputConfig: s.input_config,
+      result: s.result,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+    };
+  },
+
+  // 시나리오 저장
+  create: async (data: {
+    name: string;
+    description?: string;
+    inputConfig: Record<string, unknown>;
+    result?: Record<string, unknown>;
+  }): Promise<ScenarioData> => {
+    const response = await api.post('/scenarios', {
+      name: data.name,
+      description: data.description,
+      input_config: data.inputConfig,
+      result: data.result,
+    });
+    const s = response.data;
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      inputConfig: s.input_config,
+      result: s.result,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+    };
+  },
+
+  // 시나리오 수정
+  update: async (
+    id: string,
+    data: {
+      name?: string;
+      description?: string;
+      inputConfig?: Record<string, unknown>;
+      result?: Record<string, unknown>;
+    }
+  ): Promise<ScenarioData> => {
+    const payload: Record<string, unknown> = {};
+    if (data.name !== undefined) payload.name = data.name;
+    if (data.description !== undefined) payload.description = data.description;
+    if (data.inputConfig !== undefined) payload.input_config = data.inputConfig;
+    if (data.result !== undefined) payload.result = data.result;
+
+    const response = await api.put(`/scenarios/${id}`, payload);
+    const s = response.data;
+    return {
+      id: s.id,
+      name: s.name,
+      description: s.description,
+      inputConfig: s.input_config,
+      result: s.result,
+      createdAt: s.created_at,
+      updatedAt: s.updated_at,
+    };
+  },
+
+  // 시나리오 삭제
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/scenarios/${id}`);
   },
 };
 

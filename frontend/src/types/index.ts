@@ -37,6 +37,28 @@ export interface FinancialConfig {
   loanTenor: number; // years
 }
 
+// 인센티브 설정 (세액공제, 보조금 등)
+export interface IncentivesConfig {
+  // 세액공제
+  itcEnabled: boolean; // 투자세액공제 활성화
+  itcRate: number; // 투자세액공제율 (% of CAPEX)
+  ptcEnabled: boolean; // 생산세액공제 활성화
+  ptcAmount: number; // 생산세액공제액 (원/kg H2)
+  ptcDuration: number; // 생산세액공제 적용기간 (년)
+
+  // 보조금
+  capexSubsidy: number; // 설비투자 보조금 (원)
+  capexSubsidyRate: number; // 설비투자 보조금율 (% of CAPEX)
+  operatingSubsidy: number; // 운영 보조금 (원/kg H2)
+  operatingSubsidyDuration: number; // 운영 보조금 적용기간 (년)
+
+  // 기타 인센티브
+  carbonCreditPrice: number; // 탄소배출권 가격 (원/kg H2)
+  carbonCreditEnabled: boolean; // 탄소배출권 수익 활성화
+  cleanH2Premium: number; // 청정수소 인증 프리미엄 (원/kg H2)
+  cleanH2CertificationEnabled: boolean; // 청정수소 인증 활성화
+}
+
 // 리스크 가중치 설정
 export interface RiskWeightsConfig {
   weatherVariability: boolean;
@@ -57,6 +79,7 @@ export interface SimulationInput {
   cost: CostConfig;
   market: MarketConfig;
   financial: FinancialConfig;
+  incentives: IncentivesConfig;
   riskWeights: RiskWeightsConfig;
   monteCarlo: MonteCarloConfig;
 }
@@ -192,6 +215,26 @@ export const defaultSimulationInput: SimulationInput = {
     debtRatio: 70,                   // %
     interestRate: 5,                 // %
     loanTenor: 15,                   // 년
+  },
+  incentives: {
+    // 세액공제 (한국 수소법 기준)
+    itcEnabled: false,
+    itcRate: 10,                     // % (수소 관련 투자세액공제 최대 10%)
+    ptcEnabled: false,
+    ptcAmount: 700,                  // 원/kg H2 (청정수소발전 입찰 기준 추정)
+    ptcDuration: 10,                 // 년
+
+    // 보조금
+    capexSubsidy: 0,                 // 원
+    capexSubsidyRate: 0,             // %
+    operatingSubsidy: 0,             // 원/kg H2
+    operatingSubsidyDuration: 5,     // 년
+
+    // 기타 인센티브
+    carbonCreditPrice: 1000,         // 원/kg H2 (탄소배출권 환산 기준)
+    carbonCreditEnabled: false,
+    cleanH2Premium: 500,             // 원/kg H2 (청정수소 인증 프리미엄)
+    cleanH2CertificationEnabled: false,
   },
   riskWeights: {
     weatherVariability: true,

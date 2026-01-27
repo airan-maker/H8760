@@ -4,8 +4,11 @@ import {
   Cog6ToothIcon,
   ChartBarIcon,
   ArrowsRightLeftIcon,
-  SparklesIcon,
+  UserCircleIcon,
 } from '@heroicons/react/24/outline';
+import { useSimulationContext } from '../contexts/SimulationContext';
+import { useAuth } from '../contexts/AuthContext';
+import { UserMenu } from './auth';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -20,6 +23,8 @@ const navigation = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const { savedScenarios, currentResult } = useSimulationContext();
+  const { user, loading: authLoading } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -43,12 +48,8 @@ export default function Layout({ children }: LayoutProps) {
               </div>
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-dark-900 to-dark-600 bg-clip-text text-transparent">
-                  Hydrogen Platform
+                  H8760
                 </h1>
-                <p className="text-xs text-dark-400 flex items-center gap-1">
-                  <SparklesIcon className="w-3 h-3 text-hydrogen-500" />
-                  수소 전해조 최적화
-                </p>
               </div>
             </Link>
 
@@ -58,6 +59,14 @@ export default function Layout({ children }: LayoutProps) {
                 const isActive =
                   location.pathname === item.href ||
                   location.pathname.startsWith(item.href + '/');
+
+                // 비교 페이지에 저장된 시나리오 수 표시
+                const badge = item.href === '/compare' && savedScenarios.length > 0
+                  ? savedScenarios.length
+                  : item.href === '/dashboard' && currentResult
+                  ? null  // 대시보드에 결과 있음을 표시할 수도 있음
+                  : null;
+
                 return (
                   <Link
                     key={item.name}
@@ -74,10 +83,32 @@ export default function Layout({ children }: LayoutProps) {
                   >
                     <item.icon className={`w-4 h-4 mr-2 transition-colors ${isActive ? 'text-hydrogen-600' : 'text-dark-400 group-hover:text-hydrogen-500'}`} />
                     {item.name}
+                    {badge && (
+                      <span className="ml-1.5 px-1.5 py-0.5 text-xs font-bold rounded-full bg-hydrogen-500 text-white">
+                        {badge}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
             </nav>
+
+            {/* 로그인/사용자 메뉴 */}
+            <div className="flex items-center ml-4">
+              {authLoading ? (
+                <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+              ) : user ? (
+                <UserMenu />
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-hydrogen-500 to-primary-600 rounded-xl hover:from-hydrogen-600 hover:to-primary-700 transition-all shadow-sm hover:shadow-md"
+                >
+                  <UserCircleIcon className="w-5 h-5" />
+                  로그인
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       </header>
@@ -91,15 +122,7 @@ export default function Layout({ children }: LayoutProps) {
       <footer className="mt-auto border-t border-dark-100/50 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-6 h-6 bg-gradient-to-br from-hydrogen-500 to-primary-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">H</span>
-              </div>
-              <span className="text-sm font-medium text-dark-600">Hydrogen Platform</span>
-            </div>
-            <p className="text-center text-sm text-dark-400">
-              수소 전해조 최적화 시뮬레이션 플랫폼
-            </p>
+            <span className="text-sm font-medium text-dark-600">H8760</span>
             <div className="flex items-center space-x-4 text-xs text-dark-400">
               <span>v1.0.0</span>
               <span className="flex items-center gap-1">

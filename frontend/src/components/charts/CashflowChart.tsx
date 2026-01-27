@@ -93,14 +93,17 @@ export default function CashflowChart({ data }: Props) {
         return null;
       })()}
 
-      {/* 계산 로직 설명 (임시) */}
-      <div className="mt-4 p-3 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-700">
-        <p className="font-semibold mb-1">연간 현금흐름 (financial.py)</p>
-        <p>- 수익 = 수소판매수익 + 전력판매수익</p>
-        <p>- 운영비(OPEX) = 전력구매비 + 유지보수비 + 인건비 + 기타</p>
-        <p>- 순현금흐름 = 수익 - 운영비 - 부채상환 - 세금</p>
-        <p>- 누적현금흐름 = Σ(연간 순현금흐름)</p>
-        <p className="mt-1">투자회수점 = 누적현금흐름이 0 이상이 되는 최초 연도</p>
+      {/* 계산 로직 설명 */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 space-y-1">
+        <p className="font-semibold mb-2 text-gray-600">연간 현금흐름 (financial.py)</p>
+        <p>• 수익 = 수소판매수익 + 부산물(산소) 판매수익</p>
+        <p>• 운영비(OPEX) = 전력구매비 + 유지보수비 + 인건비 + 보험료</p>
+        <p>• 원리금상환 = 원금상환 + 이자비용 (대출기간 동안)</p>
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <p className="font-medium text-gray-600">순현금흐름 = 수익 - OPEX - 원리금상환 - 법인세</p>
+          <p className="font-medium text-gray-600">누적현금흐름 = -CAPEX + Σ(연간 순현금흐름)</p>
+          <p className="mt-1">* 투자회수점 = 누적현금흐름 ≥ 0 최초 연도</p>
+        </div>
       </div>
     </Card>
   );

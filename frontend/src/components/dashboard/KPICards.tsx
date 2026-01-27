@@ -249,44 +249,6 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
           </div>
         );
       })}
-
-      {/* 계산 로직 설명 (임시) */}
-      <div className="col-span-full mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm">
-        <h4 className="font-bold text-amber-800 mb-2">KPI 계산 로직 설명</h4>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-amber-700">
-          <div>
-            <p className="font-semibold">NPV (순현재가치)</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">NPV = -CAPEX + Σ(연간순현금흐름 / (1+할인율)^t)</code>
-            <p className="text-xs mt-1">현재값: {formatCurrency(kpis.npv.p50, true)} (P50)</p>
-          </div>
-          <div>
-            <p className="font-semibold">IRR (내부수익률)</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">NPV = 0이 되는 할인율 (Newton-Raphson)</code>
-            <p className="text-xs mt-1">현재값: {formatPercent(kpis.irr.p50, 1)} (P50)</p>
-          </div>
-          <div>
-            <p className="font-semibold">DSCR (부채상환비율)</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">DSCR = (매출-운영비) / 부채상환액</code>
-            <p className="text-xs mt-1">현재값: {formatNumber(kpis.dscr.min, 2)}x (최저)</p>
-          </div>
-          <div>
-            <p className="font-semibold">LCOH (수소 균등화 비용)</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">LCOH = 총비용PV / 총생산량PV</code>
-            <p className="text-xs mt-1">현재값: {formatNumber(kpis.lcoh, 0)} 원/kg</p>
-          </div>
-          <div>
-            <p className="font-semibold">연간 생산량</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">H2(kg) = 전력(kW) × 효율 / 비소비량</code>
-            <p className="text-xs mt-1">현재값: {formatNumber(kpis.annualH2Production.p50, 0)} 톤/년</p>
-          </div>
-          <div>
-            <p className="font-semibold">VaR 95%</p>
-            <code className="text-xs bg-amber-100 px-1 rounded">몬테카를로 10,000회 중 5번째 백분위</code>
-            <p className="text-xs mt-1">현재값: {formatCurrency(kpis.var95, true)}</p>
-          </div>
-        </div>
-        <p className="text-xs text-amber-600 mt-3">* 데이터 소스: 백엔드 시뮬레이션 API (energy_8760.py, financial.py, monte_carlo.py)</p>
-      </div>
     </div>
   );
 }

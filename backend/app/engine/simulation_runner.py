@@ -4,7 +4,21 @@
 모든 엔진을 조합하여 전체 시뮬레이션을 실행합니다.
 """
 import numpy as np
+import time
+import sys
 from typing import List
+
+
+def log_progress(step: str, detail: str = "", value: str = ""):
+    """시뮬레이션 진행 상황 로깅"""
+    timestamp = time.strftime("%H:%M:%S")
+    if value:
+        print(f"[{timestamp}] ⚡ {step}: {detail} = {value}", flush=True)
+    elif detail:
+        print(f"[{timestamp}] ⚡ {step}: {detail}", flush=True)
+    else:
+        print(f"[{timestamp}] ⚡ {step}", flush=True)
+    sys.stdout.flush()
 
 from app.schemas.simulation import SimulationInput
 from app.schemas.result import (
@@ -43,6 +57,11 @@ def run_full_simulation(
     Returns:
         SimulationResult: 시뮬레이션 결과
     """
+    start_time = time.time()
+    print("\n" + "="*60, flush=True)
+    log_progress("시뮬레이션 시작", f"ID: {simulation_id[:8]}...")
+    print("="*60, flush=True)
+
     # 설정 추출
     equip = input_config.equipment
     cost = input_config.cost
@@ -52,10 +71,19 @@ def run_full_simulation(
     mc = input_config.monte_carlo
     renewable = input_config.renewable
 
+    log_progress("입력 설정 로드", "전해조 용량", f"{equip.electrolyzer_capacity} MW")
+    log_progress("입력 설정 로드", "전해조 효율", f"{equip.electrolyzer_efficiency}%")
+    log_progress("입력 설정 로드", "CAPEX", f"{cost.capex/1e8:.1f}억원")
+    log_progress("입력 설정 로드", "수소 판매가", f"{market.h2_price:,}원/kg")
+    log_progress("입력 설정 로드", "프로젝트 기간", f"{financial.project_lifetime}년")
+
     # 전력 가격 생성 (8760개)
+    print("-"*60, flush=True)
+    log_progress("STEP 1/6", "전력 가격 프로파일 생성 (8760시간)")
     base_electricity_prices = _generate_electricity_prices(
         cost.ppa_price or 100.0, market.electricity_price_scenario
     )
+    log_progress("  └ 완료", f"평균 {np.mean(base_electricity_prices):.1f}원/kWh, 최대 {np.max(base_electricity_prices):.1f}원/kWh")
 
     # 재생에너지 출력 프로파일 생성 (옵션)
     renewable_output = None
@@ -76,6 +104,8 @@ def run_full_simulation(
         price_threshold = cost.ppa_price * 1.2 if cost.ppa_price else 120.0
 
     # 8760 엔진 설정
+    print("-"*60, flush=True)
+    log_progress("STEP 2/6", "8760 에너지 모델 설정")
     energy_config = Energy8760Config(
         electrolyzer_capacity_mw=equip.electrolyzer_capacity,
         electrolyzer_efficiency=equip.electrolyzer_efficiency,
@@ -86,6 +116,7 @@ def run_full_simulation(
     )
 
     # 기준 8760 계산
+    log_progress("  └ 기준연도 8760 계산 중...")
     base_result = calculate_8760(
         config=energy_config,
         electricity_prices=base_electricity_prices,
@@ -93,8 +124,11 @@ def run_full_simulation(
         h2_price=market.h2_price,
         year=1,
     )
+    log_progress("  └ 완료", f"연간 수소생산 {np.sum(base_result.h2_production)/1000:.1f}톤, 가동시간 {np.sum(base_result.operating_hours):,}시간")
 
     # 다년간 결과 집계
+    print("-"*60, flush=True)
+    log_progress("STEP 3/6", f"다년간 현금흐름 계산 ({financial.project_lifetime}년)")
     yearly_data = aggregate_yearly_results(
         config=energy_config,
         electricity_prices=base_electricity_prices,
@@ -106,8 +140,11 @@ def run_full_simulation(
     yearly_revenues = [y["total_revenue"] for y in yearly_data["yearly_results"]]
     yearly_elec_costs = [y["total_electricity_cost"] for y in yearly_data["yearly_results"]]
     yearly_h2_prod = [y["h2_production_kg"] for y in yearly_data["yearly_results"]]
+    log_progress("  └ 완료", f"총 수익 {sum(yearly_revenues)/1e8:.0f}억원, 총 전력비 {sum(yearly_elec_costs)/1e8:.0f}억원")
 
     # 재무 분석 설정
+    print("-"*60, flush=True)
+    log_progress("STEP 4/6", "재무 분석 실행")
     financial_config = FinancialConfig(
         capex=cost.capex,
         opex_ratio=cost.opex_ratio,
@@ -127,8 +164,14 @@ def run_full_simulation(
         yearly_electricity_costs=yearly_elec_costs,
         yearly_h2_production=yearly_h2_prod,
     )
+    log_progress("  └ NPV", f"{fin_result.npv/1e8:.1f}억원")
+    log_progress("  └ IRR", f"{fin_result.irr:.2f}%")
+    log_progress("  └ LCOH", f"{fin_result.lcoh:,.0f}원/kg")
+    log_progress("  └ 투자회수기간", f"{fin_result.payback_period:.1f}년")
 
     # 몬테카를로 시뮬레이션
+    print("-"*60, flush=True)
+    log_progress("STEP 5/6", f"몬테카를로 시뮬레이션 ({mc.iterations:,}회 반복)")
     mc_config = MonteCarloConfig(
         iterations=mc.iterations,
         weather_sigma=mc.weather_sigma,
@@ -137,6 +180,7 @@ def run_full_simulation(
 
     annual_opex = cost.capex * (cost.opex_ratio / 100)
 
+    mc_start = time.time()
     mc_result = run_monte_carlo(
         energy_config=energy_config,
         mc_config=mc_config,
@@ -149,8 +193,16 @@ def run_full_simulation(
         weather_variability=risk.weather_variability,
         price_volatility=risk.price_volatility,
     )
+    mc_elapsed = time.time() - mc_start
+    log_progress("  └ 완료", f"{mc_elapsed:.2f}초 소요")
+    log_progress("  └ NPV P50", f"{mc_result.npv_p50/1e8:.1f}억원")
+    log_progress("  └ NPV P90", f"{mc_result.npv_p90/1e8:.1f}억원")
+    log_progress("  └ IRR P50", f"{mc_result.irr_p50:.2f}%")
+    log_progress("  └ VaR 95%", f"{mc_result.var_95/1e8:.1f}억원")
 
     # 민감도 분석
+    print("-"*60, flush=True)
+    log_progress("STEP 6/6", "민감도 분석 및 결과 집계")
     sensitivity_vars = generate_default_sensitivity_variables(
         electricity_price=cost.ppa_price or 100.0,
         h2_price=market.h2_price,
@@ -224,6 +276,14 @@ def run_full_simulation(
     # 히스토그램 생성
     npv_histogram = create_histogram(mc_result.npv_distribution)
     revenue_histogram = create_histogram(mc_result.revenue_distribution)
+
+    log_progress("  └ 민감도 분석", f"{len(sensitivity_results)}개 변수")
+    log_progress("  └ 리스크 폭포수", f"{len(waterfall)}개 요인")
+
+    total_elapsed = time.time() - start_time
+    print("="*60, flush=True)
+    log_progress("시뮬레이션 완료", f"총 소요시간 {total_elapsed:.2f}초")
+    print("="*60 + "\n", flush=True)
 
     # 결과 조합
     return SimulationResult(

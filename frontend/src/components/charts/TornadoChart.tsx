@@ -99,13 +99,16 @@ export default function TornadoChart({ data, baseNpv }: Props) {
         </table>
       </div>
 
-      {/* 계산 로직 설명 (임시) */}
-      <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
-        <p className="font-semibold mb-1">민감도 분석 (sensitivity.py)</p>
-        <p>- 각 변수를 ±범위로 변동시킨 후 NPV 재계산</p>
-        <p>- 전력가격 ±20%, 수소가격 ±10%, 가동률 ±5%</p>
-        <p>- 효율 ±3%, CAPEX ±15%</p>
-        <p className="mt-1">영향 범위 = |고케이스 NPV - 저케이스 NPV|</p>
+      {/* 계산 로직 설명 */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 space-y-1">
+        <p className="font-semibold mb-2 text-gray-600">민감도 분석 (sensitivity.py)</p>
+        <p>• 각 변수를 ±범위로 변동 후 NPV 재계산</p>
+        <p>• 전력가격: ±20% | 수소가격: ±10%</p>
+        <p>• 가동률: ±5% | 효율: ±3% | CAPEX: ±15%</p>
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <p className="font-medium text-gray-600">영향 범위 = |고케이스 NPV - 저케이스 NPV|</p>
+          <p className="mt-1">* 막대 길이 순으로 정렬 (영향력 큰 순서)</p>
+        </div>
       </div>
     </Card>
   );

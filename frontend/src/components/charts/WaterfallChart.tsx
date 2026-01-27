@@ -84,14 +84,16 @@ export default function WaterfallChart({ data }: Props) {
         </div>
       </div>
 
-      {/* 계산 로직 설명 (임시) */}
-      <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg text-xs text-purple-700">
-        <p className="font-semibold mb-1">리스크 분해 (simulation_runner.py)</p>
-        <p>- 기준 NPV: 결정론적 시나리오</p>
-        <p>- 기상 변동성: 발전량 불확실성 영향</p>
-        <p>- 가격 변동성: 전력/수소 가격 변동 영향</p>
-        <p>- 효율 저하: 시간 경과에 따른 성능 저하</p>
-        <p className="mt-1">최종 NPV = 기준 NPV + Σ(리스크 영향)</p>
+      {/* 계산 로직 설명 */}
+      <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500 space-y-1">
+        <p className="font-semibold mb-2 text-gray-600">리스크 분해 분석 (simulation_runner.py)</p>
+        <p>• 기준 NPV: 결정론적 시나리오 (변동성 제외)</p>
+        <p>• 기상 변동성: 발전량 불확실성 → 수소 생산량 영향</p>
+        <p>• 전력가격 변동: 시간대별 전력비용 변동 영향</p>
+        <p>• 효율 저하: 연간 성능 저하율 적용</p>
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <p className="font-medium text-gray-600">최종 NPV = 기준 NPV + Σ(리스크 요인별 영향)</p>
+        </div>
       </div>
     </Card>
   );

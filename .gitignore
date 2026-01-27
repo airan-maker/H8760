@@ -49,6 +49,10 @@ backend/dist/
 .env.*.local
 *.env
 
+# Firebase service account key
+firebase-service-account.json
+**/firebase-service-account.json
+
 # OS
 .DS_Store
 Thumbs.db
@@ -89,3 +93,4 @@ coverage.xml
 tmp/
 temp/
 *.tmp
+.claude/
