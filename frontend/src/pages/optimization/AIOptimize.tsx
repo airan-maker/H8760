@@ -171,6 +171,40 @@ export default function AIOptimize() {
         </div>
       </div>
 
+      {/* 기준 시나리오 요약 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-dark-700">기준 시나리오 설정</h3>
+          <span className="text-xs text-dark-400">이 값을 기준으로 최적화합니다</span>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">전해조 용량</div>
+            <div className="font-semibold text-dark-700">{currentInput.equipment.electrolyzerCapacity} MW</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">효율</div>
+            <div className="font-semibold text-dark-700">{currentInput.equipment.electrolyzerEfficiency}%</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">CAPEX</div>
+            <div className="font-semibold text-dark-700">{(currentInput.cost.capex / 1e8).toFixed(0)}억원</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">전력가격</div>
+            <div className="font-semibold text-dark-700">{currentInput.cost.ppaPrice || 100}원/kWh</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">수소가격</div>
+            <div className="font-semibold text-dark-700">{currentInput.market.h2Price.toLocaleString()}원/kg</div>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-2">
+            <div className="text-xs text-dark-400">할인율</div>
+            <div className="font-semibold text-dark-700">{currentInput.financial.discountRate}%</div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 좌측: 설정 패널 */}
         <div className="lg:col-span-1 space-y-6">
