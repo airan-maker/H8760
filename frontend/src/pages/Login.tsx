@@ -32,11 +32,8 @@ export default function Login() {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        {/* 로고 및 타이틀 */}
+        {/* 타이틀 */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-hydrogen-500 to-primary-600 rounded-2xl shadow-lg mb-4">
-            <span className="text-white font-bold text-2xl">H</span>
-          </div>
           <h1 className="text-2xl font-bold text-dark-900 mb-2">H8760 로그인</h1>
           <p className="text-dark-500">
             계정에 로그인하여 시나리오를 저장하고 관리하세요

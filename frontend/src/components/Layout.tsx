@@ -56,24 +56,10 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-br from-hydrogen-400 to-primary-500 rounded-xl blur-lg opacity-40 group-hover:opacity-60 transition-opacity" />
-                <div className="relative w-11 h-11 bg-gradient-to-br from-hydrogen-500 to-primary-600 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform">
-                  <span className="text-white font-bold text-xl tracking-tight">H</span>
-                  <div className="absolute -top-1 -right-1">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-hydrogen-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-hydrogen-500"></span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-dark-900 to-dark-600 bg-clip-text text-transparent">
-                  H8760
-                </h1>
-              </div>
+            <Link to="/" className="flex items-center group">
+              <h1 className="text-xl font-bold bg-gradient-to-r from-dark-900 to-dark-600 bg-clip-text text-transparent group-hover:from-hydrogen-600 group-hover:to-primary-600 transition-all">
+                H8760
+              </h1>
             </Link>
 
             {/* Mobile menu button */}
