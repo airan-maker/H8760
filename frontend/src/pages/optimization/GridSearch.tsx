@@ -227,7 +227,7 @@ export default function GridSearch() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">전해조 용량</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={currentInput.equipment.electrolyzerCapacity}
@@ -235,14 +235,14 @@ export default function GridSearch() {
                   ...currentInput,
                   equipment: { ...currentInput.equipment, electrolyzerCapacity: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-10 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400">MW</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">MW</span>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">효율</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={currentInput.equipment.electrolyzerEfficiency}
@@ -250,14 +250,14 @@ export default function GridSearch() {
                   ...currentInput,
                   equipment: { ...currentInput.equipment, electrolyzerEfficiency: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-8 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400">%</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">%</span>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">CAPEX</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={Math.round(currentInput.cost.capex / 1e8)}
@@ -265,14 +265,14 @@ export default function GridSearch() {
                   ...currentInput,
                   cost: { ...currentInput.cost, capex: (parseFloat(e.target.value) || 0) * 1e8 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-8 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400">억</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">억</span>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">전력가격</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={currentInput.cost.ppaPrice || 100}
@@ -280,14 +280,14 @@ export default function GridSearch() {
                   ...currentInput,
                   cost: { ...currentInput.cost, ppaPrice: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-14 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400 whitespace-nowrap">원/kWh</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">원/kWh</span>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">수소가격</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={currentInput.market.h2Price}
@@ -295,14 +295,14 @@ export default function GridSearch() {
                   ...currentInput,
                   market: { ...currentInput.market, h2Price: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-12 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400 whitespace-nowrap">원/kg</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">원/kg</span>
             </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
             <label className="text-xs text-dark-400 block mb-1">할인율</label>
-            <div className="flex items-center gap-1">
+            <div className="relative">
               <input
                 type="number"
                 value={currentInput.financial.discountRate}
@@ -310,9 +310,9 @@ export default function GridSearch() {
                   ...currentInput,
                   financial: { ...currentInput.financial, discountRate: parseFloat(e.target.value) || 0 }
                 })}
-                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+                className="w-full px-2 py-1.5 pr-8 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
               />
-              <span className="text-xs text-dark-400">%</span>
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-dark-400">%</span>
             </div>
           </div>
         </div>

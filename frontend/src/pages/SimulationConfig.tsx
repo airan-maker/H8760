@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '../components/common';
 import {
@@ -26,8 +26,11 @@ export default function SimulationConfig() {
   const [error, setError] = useState<string | null>(null);
 
   // location state에서 초기 탭 설정 (대시보드에서 '변수 조정' 클릭 시 'equipment' 탭으로)
-  const initialTab = (location.state as { initialTab?: TabType })?.initialTab || 'preset';
+  const locationState = location.state as { initialTab?: TabType; autoRun?: boolean } | null;
+  const initialTab = locationState?.initialTab || 'preset';
+  const autoRun = locationState?.autoRun || false;
   const [activeTab, setActiveTab] = useState<TabType>(initialTab);
+  const autoRunTriggered = useRef(false);
 
   const handlePresetSelect = (presetInput: Partial<SimulationInput>) => {
     setInput((prev) => ({
@@ -186,6 +189,19 @@ export default function SimulationConfig() {
       setLoading(false);
     }
   };
+
+  // autoRun 처리 (AI 최적화에서 '적용 후 시뮬레이션 실행' 클릭 시)
+  useEffect(() => {
+    if (autoRun && !autoRunTriggered.current) {
+      autoRunTriggered.current = true;
+      // 약간의 딜레이 후 시뮬레이션 실행 (상태 업데이트가 반영되도록)
+      const timer = setTimeout(() => {
+        handleRunSimulation(true); // 데모 모드로 실행
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRun]);
 
   const tabs = [
     { id: 'preset', label: '프리셋' },

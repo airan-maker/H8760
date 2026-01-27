@@ -14,6 +14,7 @@ interface Props {
   baseKpis?: Record<string, number>;
   isSelected?: boolean;
   onApply?: () => void;
+  onApplyAndRun?: () => void;
 }
 
 export default function RecommendationCard({
@@ -21,6 +22,7 @@ export default function RecommendationCard({
   baseKpis,
   isSelected = false,
   onApply,
+  onApplyAndRun,
 }: Props) {
   const { rank, recommendedInput, expectedKpis, reasoning, confidence, tradeOffs } =
     recommendation;
@@ -125,28 +127,38 @@ export default function RecommendationCard({
           </div>
         </div>
 
-        {onApply && (
-          <button
-            onClick={onApply}
-            className={`
-              px-4 py-2 rounded-lg text-sm font-medium transition-colors
-              ${
-                isSelected
-                  ? 'bg-hydrogen-500 text-white'
-                  : 'bg-hydrogen-50 text-hydrogen-600 hover:bg-hydrogen-100'
-              }
-            `}
-          >
-            {isSelected ? (
-              <>
-                <CheckCircleIcon className="w-4 h-4 inline mr-1" />
-                적용됨
-              </>
-            ) : (
-              '적용하기'
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {onApply && (
+            <button
+              onClick={onApply}
+              className={`
+                px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                ${
+                  isSelected
+                    ? 'bg-hydrogen-500 text-white'
+                    : 'bg-hydrogen-50 text-hydrogen-600 hover:bg-hydrogen-100'
+                }
+              `}
+            >
+              {isSelected ? (
+                <>
+                  <CheckCircleIcon className="w-4 h-4 inline mr-1" />
+                  적용됨
+                </>
+              ) : (
+                '설정 적용'
+              )}
+            </button>
+          )}
+          {onApplyAndRun && (
+            <button
+              onClick={onApplyAndRun}
+              className="px-3 py-2 rounded-lg text-sm font-medium bg-gradient-to-r from-hydrogen-500 to-primary-600 text-white hover:from-hydrogen-600 hover:to-primary-700 transition-colors"
+            >
+              적용 후 시뮬레이션 실행
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 추천 변수값 */}
