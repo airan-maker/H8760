@@ -3,6 +3,88 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Button } from '../components/common';
 import { projectsApi } from '../services/api';
 import { useSimulationContext } from '../contexts/SimulationContext';
+import {
+  BoltIcon,
+  ChartBarIcon,
+  CurrencyDollarIcon,
+  ShieldCheckIcon,
+  CpuChipIcon,
+  GlobeAltIcon,
+  BuildingOffice2Icon,
+  BanknotesIcon,
+} from '@heroicons/react/24/outline';
+
+// 글로벌 주요 수소 프로젝트 데이터
+const globalProjects = [
+  {
+    name: 'NEOM Green Hydrogen',
+    country: '사우디아라비아',
+    flag: '🇸🇦',
+    capacity: '2.2 GW',
+    investment: '$84억',
+    status: '건설 중 (80%)',
+    startYear: 2027,
+    description: '세계 최대 그린수소→암모니아 프로젝트, 연간 120만톤 암모니아 생산',
+    partners: 'ACWA Power, Air Products, NEOM',
+    offtake: 'Air Products 30년 장기 구매계약',
+  },
+  {
+    name: 'Western Green Energy Hub',
+    country: '호주',
+    flag: '🇦🇺',
+    capacity: '70 GW (계획)',
+    investment: '$700억+',
+    status: '개발 단계',
+    startYear: 2030,
+    description: '세계 최대 규모 재생에너지-수소 허브, 15,000km² 부지',
+    partners: 'InterContinental Energy, CWP Global',
+    offtake: '아시아 수출 목표',
+  },
+  {
+    name: 'AM Green Ammonia',
+    country: '인도',
+    flag: '🇮🇳',
+    capacity: '1.3 GW',
+    investment: '$50억',
+    status: 'FID 완료',
+    startYear: 2027,
+    description: '인도 최초 대규모 그린암모니아 프로젝트',
+    partners: 'Greenko, AM Green',
+    offtake: '유럽/아시아 수출',
+  },
+  {
+    name: 'HyDeal Ambition',
+    country: '유럽',
+    flag: '🇪🇺',
+    capacity: '95 GW (목표)',
+    investment: '$1,500억',
+    status: '단계적 개발',
+    startYear: '2025-2030',
+    description: '유럽 최대 그린수소 컨소시엄, 30개국 참여',
+    partners: 'Enagás, OGE, SNAM 외 30개사',
+    offtake: '€1.5/kg 목표 가격',
+  },
+  {
+    name: 'ACES Delta',
+    country: '미국',
+    flag: '🇺🇸',
+    capacity: '220 MW → 1.5 GW',
+    investment: '$15억',
+    status: '1단계 운영 중',
+    startYear: 2025,
+    description: '유타주 대규모 수소 저장 및 발전 프로젝트',
+    partners: 'Mitsubishi Power, Magnum Development',
+    offtake: 'Intermountain Power Agency',
+  },
+];
+
+// 시장 현황 통계
+const marketStats = [
+  { label: '글로벌 발표 프로젝트', value: '1,572개', subtext: '70개국' },
+  { label: '글로벌 설치 용량', value: '2 GW', subtext: '2024년 기준' },
+  { label: 'FID 완료 투자액', value: '$750억', subtext: '전체의 11%' },
+  { label: '2030년 예상 생산량', value: '37 Mt/년', subtext: '저탄소 수소' },
+];
 
 export default function ProjectWizard() {
   const navigate = useNavigate();
@@ -97,23 +179,180 @@ export default function ProjectWizard() {
         </div>
       </div>
 
-      {/* Features */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+      {/* Features - Enhanced */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
         {[
-          { icon: '⚡', title: '실시간 분석', desc: '몬테카를로 시뮬레이션' },
-          { icon: '📊', title: '8760 최적화', desc: '연간 운영 패턴 분석' },
-          { icon: '💰', title: '경제성 평가', desc: 'NPV, IRR, LCOH 산출' },
+          {
+            icon: BoltIcon,
+            title: '몬테카를로 시뮬레이션',
+            desc: '10,000회 확률적 시뮬레이션으로 P50/P90/P99 신뢰구간 분석',
+            color: 'from-yellow-400 to-orange-500',
+            details: ['불확실성 정량화', '리스크 분포 분석', '민감도 분석'],
+          },
+          {
+            icon: ChartBarIcon,
+            title: '8760시간 운영 최적화',
+            desc: '연간 시간별 전력가격, 생산량, 운영 패턴 상세 분석',
+            color: 'from-blue-400 to-cyan-500',
+            details: ['시간별 전력비용', 'Capacity Factor', '계절별 패턴'],
+          },
+          {
+            icon: CurrencyDollarIcon,
+            title: '프로젝트 파이낸스 분석',
+            desc: 'NPV, IRR, LCOH, DSCR 등 핵심 재무지표 자동 산출',
+            color: 'from-green-400 to-emerald-500',
+            details: ['현금흐름 분석', 'Bankability 평가', '레버리지 최적화'],
+          },
+          {
+            icon: ShieldCheckIcon,
+            title: 'Bankability 평가',
+            desc: '금융기관 관점의 Covenant, 적립금, 스트레스 테스트',
+            color: 'from-purple-400 to-violet-500',
+            details: ['DSCR 스트레스 테스트', 'LLCR/PLCR 산출', 'Covenant 분석'],
+          },
+          {
+            icon: CpuChipIcon,
+            title: 'AI 기반 최적화',
+            desc: 'Claude AI가 목표 KPI 달성을 위한 최적 파라미터 추천',
+            color: 'from-pink-400 to-rose-500',
+            details: ['목표 지향 탐색', 'Grid Search', '민감도 기반 탐색'],
+          },
+          {
+            icon: BanknotesIcon,
+            title: '인센티브 분석',
+            desc: 'ITC, PTC, 보조금, 탄소배출권 등 정책 지원 효과 정량화',
+            color: 'from-teal-400 to-cyan-500',
+            details: ['세액공제 효과', '보조금 반영', '청정수소 인증'],
+          },
         ].map((feature, index) => (
           <div
             key={feature.title}
-            className="group bg-white rounded-2xl border border-dark-100 p-5 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300"
-            style={{ animationDelay: `${index * 100}ms` }}
+            className="group bg-white rounded-2xl border border-dark-100 p-6 hover:shadow-card-hover hover:-translate-y-1 transition-all duration-300"
+            style={{ animationDelay: `${index * 50}ms` }}
           >
-            <span className="text-3xl mb-3 block group-hover:scale-110 transition-transform">{feature.icon}</span>
-            <h3 className="font-semibold text-dark-800 mb-1">{feature.title}</h3>
-            <p className="text-sm text-dark-400">{feature.desc}</p>
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
+              <feature.icon className="w-6 h-6 text-white" />
+            </div>
+            <h3 className="font-semibold text-dark-800 mb-2">{feature.title}</h3>
+            <p className="text-sm text-dark-500 mb-3">{feature.desc}</p>
+            <div className="flex flex-wrap gap-1.5">
+              {feature.details.map((detail) => (
+                <span key={detail} className="px-2 py-0.5 bg-dark-50 text-dark-500 text-xs rounded-md">
+                  {detail}
+                </span>
+              ))}
+            </div>
           </div>
         ))}
+      </div>
+
+      {/* 글로벌 수소 시장 현황 */}
+      <div className="mb-10">
+        <div className="flex items-center gap-3 mb-6">
+          <GlobeAltIcon className="w-6 h-6 text-hydrogen-600" />
+          <h2 className="text-xl font-bold text-dark-800">글로벌 그린수소 프로젝트 현황</h2>
+        </div>
+
+        {/* 시장 통계 */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {marketStats.map((stat) => (
+            <div key={stat.label} className="bg-gradient-to-br from-dark-800 to-dark-900 rounded-2xl p-5 text-center">
+              <div className="text-2xl md:text-3xl font-bold text-white mb-1">{stat.value}</div>
+              <div className="text-sm text-dark-300">{stat.label}</div>
+              <div className="text-xs text-hydrogen-400 mt-1">{stat.subtext}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* 주요 프로젝트 테이블 */}
+        <div className="bg-white rounded-2xl border border-dark-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-dark-50 border-b border-dark-100">
+                  <th className="text-left px-5 py-4 text-sm font-semibold text-dark-600">프로젝트</th>
+                  <th className="text-left px-5 py-4 text-sm font-semibold text-dark-600 hidden md:table-cell">전해조 용량</th>
+                  <th className="text-left px-5 py-4 text-sm font-semibold text-dark-600 hidden lg:table-cell">투자규모</th>
+                  <th className="text-left px-5 py-4 text-sm font-semibold text-dark-600">상태</th>
+                  <th className="text-left px-5 py-4 text-sm font-semibold text-dark-600 hidden xl:table-cell">Offtake 구조</th>
+                </tr>
+              </thead>
+              <tbody>
+                {globalProjects.map((project, index) => (
+                  <tr key={project.name} className={`border-b border-dark-50 hover:bg-dark-50/50 transition-colors ${index === globalProjects.length - 1 ? 'border-b-0' : ''}`}>
+                    <td className="px-5 py-4">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl">{project.flag}</span>
+                        <div>
+                          <div className="font-semibold text-dark-800">{project.name}</div>
+                          <div className="text-sm text-dark-500">{project.country}</div>
+                          <div className="text-xs text-dark-400 mt-1 hidden sm:block max-w-xs">{project.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 hidden md:table-cell">
+                      <div className="font-semibold text-hydrogen-600">{project.capacity}</div>
+                      <div className="text-xs text-dark-400">{project.partners.split(',')[0]}</div>
+                    </td>
+                    <td className="px-5 py-4 hidden lg:table-cell">
+                      <div className="font-semibold text-dark-800">{project.investment}</div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${
+                        project.status.includes('운영') ? 'bg-green-100 text-green-700' :
+                        project.status.includes('건설') ? 'bg-blue-100 text-blue-700' :
+                        project.status.includes('FID') ? 'bg-purple-100 text-purple-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {project.status}
+                      </div>
+                      <div className="text-xs text-dark-400 mt-1">{project.startYear}년</div>
+                    </td>
+                    <td className="px-5 py-4 hidden xl:table-cell">
+                      <div className="text-sm text-dark-600 max-w-[200px]">{project.offtake}</div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 출처 표시 */}
+          <div className="px-5 py-3 bg-dark-50 border-t border-dark-100">
+            <p className="text-xs text-dark-400">
+              출처: IEA Global Hydrogen Review 2025, Hydrogen Council Insights 2024 |
+              <span className="text-dark-500"> 전 세계 1,572개 프로젝트 중 FID 완료는 약 11% 수준</span>
+            </p>
+          </div>
+        </div>
+
+        {/* 투자 구조 인사이트 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+          <div className="bg-gradient-to-br from-hydrogen-50 to-primary-50 rounded-xl p-5 border border-hydrogen-100">
+            <BuildingOffice2Icon className="w-8 h-8 text-hydrogen-600 mb-3" />
+            <h4 className="font-semibold text-dark-800 mb-2">Offtake 계약 구조</h4>
+            <p className="text-sm text-dark-600">
+              대부분의 대형 프로젝트는 <strong>Take-or-Pay</strong> 장기 구매계약(15-30년)을
+              기반으로 금융조달. 예측 가능한 수익 흐름이 Bankability의 핵심.
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-5 border border-green-100">
+            <BanknotesIcon className="w-8 h-8 text-green-600 mb-3" />
+            <h4 className="font-semibold text-dark-800 mb-2">프로젝트 파이낸스</h4>
+            <p className="text-sm text-dark-600">
+              평균 <strong>부채비율 60-70%</strong>, DSCR 1.3x 이상 요구.
+              정부 보증, ECA 금융, 그린본드 등 다양한 조달 구조 활용.
+            </p>
+          </div>
+          <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-xl p-5 border border-purple-100">
+            <ShieldCheckIcon className="w-8 h-8 text-purple-600 mb-3" />
+            <h4 className="font-semibold text-dark-800 mb-2">주요 리스크 요인</h4>
+            <p className="text-sm text-dark-600">
+              전력비용 변동성, 수소가격 불확실성, 기술 성숙도가
+              <strong> FID 지연의 주요 원인</strong>. 인센티브 정책이 핵심 변수.
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* 프로젝트 생성 폼 */}
