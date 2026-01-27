@@ -127,7 +127,7 @@ export default function AIOptimize() {
       <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-2xl border border-violet-100 p-5">
         <div className="flex items-start gap-4">
           <div className="p-2 bg-white rounded-xl shadow-sm">
-            <LightBulbIcon className="w-5 h-5 text-violet-600" />
+            <SparklesIcon className="w-5 h-5 text-violet-600" />
           </div>
           <div className="flex-1 space-y-3">
             <div>
