@@ -57,7 +57,7 @@ export default function Layout({ children }: LayoutProps) {
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
             <Link to="/" className="flex items-center group">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-dark-900 to-dark-600 bg-clip-text text-transparent group-hover:from-hydrogen-600 group-hover:to-primary-600 transition-all">
+              <h1 className="text-2xl font-bold text-dark-800 group-hover:bg-gradient-to-r group-hover:from-hydrogen-600 group-hover:to-primary-600 group-hover:bg-clip-text group-hover:text-transparent transition-all">
                 H8760
               </h1>
             </Link>
