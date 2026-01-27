@@ -203,12 +203,16 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
   // 시나리오 저장
   const saveScenario = async (name: string, description?: string): Promise<SavedScenario | null> => {
-    if (!currentResult) return null;
+    if (!currentResult) {
+      console.error('시나리오 저장 실패: 저장할 결과가 없습니다.');
+      return null;
+    }
 
     const scenarioDescription = description || `${currentInput.equipment.electrolyzerCapacity} MW, ${currentInput.cost.electricitySource}`;
 
     if (user) {
       // 로그인 상태: 서버에 저장
+      console.log('서버에 시나리오 저장 시도:', { name, description: scenarioDescription });
       try {
         const created = await scenariosApi.create({
           name,
@@ -216,6 +220,8 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
           inputConfig: currentInput as unknown as Record<string, unknown>,
           result: currentResult as unknown as Record<string, unknown>,
         });
+
+        console.log('시나리오 저장 성공:', created);
 
         const scenario: SavedScenario = {
           id: created.id,
@@ -229,12 +235,18 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
 
         setServerScenarios((prev) => [scenario, ...prev]);
         return scenario;
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('시나리오 저장 실패:', error);
+        // axios 에러인 경우 상세 정보 출력
+        if (error && typeof error === 'object' && 'response' in error) {
+          const axiosError = error as { response?: { status?: number; data?: unknown } };
+          console.error('서버 응답:', axiosError.response?.status, axiosError.response?.data);
+        }
         return null;
       }
     } else {
       // 비로그인 상태: localStorage에 저장
+      console.log('로컬에 시나리오 저장:', { name, description: scenarioDescription });
       const scenario: SavedScenario = {
         id: `scenario_${Date.now()}`,
         name,

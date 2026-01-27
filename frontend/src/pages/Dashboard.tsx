@@ -83,6 +83,8 @@ export default function Dashboard() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   // 저장 버튼 클릭 핸들러
   const handleSaveClick = () => {
@@ -224,13 +226,27 @@ export default function Dashboard() {
 
   const handleSaveScenario = async () => {
     if (!scenarioName.trim()) return;
-    const description = `${currentInput.equipment.electrolyzerCapacity} MW ${currentInput.cost.electricitySource}, ${currentInput.market.h2Price.toLocaleString()}원/kg`;
-    const saved = await saveScenario(scenarioName, description);
-    if (saved) {
-      setShowSaveModal(false);
-      setScenarioName('');
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const description = `${currentInput.equipment.electrolyzerCapacity} MW ${currentInput.cost.electricitySource}, ${currentInput.market.h2Price.toLocaleString()}원/kg`;
+      const saved = await saveScenario(scenarioName, description);
+
+      if (saved) {
+        setShowSaveModal(false);
+        setScenarioName('');
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setSaveError('시나리오 저장에 실패했습니다. 다시 시도해주세요.');
+      }
+    } catch (error) {
+      console.error('저장 오류:', error);
+      setSaveError('시나리오 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -520,6 +536,14 @@ export default function Dashboard() {
             <p className="text-sm text-dark-500 mb-4">
               현재 시뮬레이션 결과를 시나리오로 저장하여 비교 분석에 활용할 수 있습니다.
             </p>
+
+            {/* 에러 메시지 */}
+            {saveError && (
+              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+                {saveError}
+              </div>
+            )}
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-dark-700 mb-2">
                 시나리오 이름
@@ -527,10 +551,14 @@ export default function Dashboard() {
               <input
                 type="text"
                 value={scenarioName}
-                onChange={(e) => setScenarioName(e.target.value)}
+                onChange={(e) => {
+                  setScenarioName(e.target.value);
+                  setSaveError(null);
+                }}
                 placeholder="예: 기준 시나리오"
                 className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-hydrogen-500/20 focus:border-hydrogen-500"
                 autoFocus
+                disabled={saving}
               />
             </div>
             <div className="p-3 bg-dark-50 rounded-xl mb-4 text-sm text-dark-600">
@@ -554,7 +582,9 @@ export default function Dashboard() {
                 onClick={() => {
                   setShowSaveModal(false);
                   setScenarioName('');
+                  setSaveError(null);
                 }}
+                disabled={saving}
               >
                 취소
               </Button>
@@ -562,9 +592,17 @@ export default function Dashboard() {
                 variant="gradient"
                 fullWidth
                 onClick={handleSaveScenario}
-                disabled={!scenarioName.trim()}
+                disabled={!scenarioName.trim() || saving}
               >
-                저장
+                {saving ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    저장 중...
+                  </span>
+                ) : '저장'}
               </Button>
             </div>
           </div>
