@@ -260,8 +260,33 @@ export default function SimulationConfig() {
 
       {/* 탭 네비게이션 */}
       <div className="mb-6">
-        <div className="flex items-center gap-1 p-1.5 bg-dark-50 rounded-2xl overflow-x-auto">
-          {tabs.map((tab, index) => (
+        {/* 모바일: 그리드 레이아웃 */}
+        <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-dark-50 rounded-2xl sm:hidden">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
+              className={`
+                flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium
+                transition-all duration-300
+                ${
+                  activeTab === tab.id
+                    ? 'bg-white text-hydrogen-700 shadow-md'
+                    : 'text-dark-500 hover:text-dark-700 hover:bg-white/50'
+                }
+              `}
+            >
+              <span className={activeTab === tab.id ? 'text-hydrogen-600' : 'text-dark-400'}>
+                {tabIcons[tab.id as keyof typeof tabIcons]}
+              </span>
+              <span className="truncate w-full text-center">{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* 데스크탑: 기존 가로 레이아웃 */}
+        <div className="hidden sm:flex items-center gap-1 p-1.5 bg-dark-50 rounded-2xl">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}

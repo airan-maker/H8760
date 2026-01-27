@@ -3,54 +3,21 @@ import { formatCurrency, formatPercent, formatNumber } from '../../utils/formatt
 
 interface Props {
   kpis: KPIs;
-  confidenceLevel: 'P50' | 'P90' | 'P99';
+  confidenceLevel?: 'P50' | 'P90' | 'P99';
 }
 
-export default function KPICards({ kpis, confidenceLevel }: Props) {
-  const getNpvValue = () => {
-    switch (confidenceLevel) {
-      case 'P50':
-        return kpis.npv.p50;
-      case 'P90':
-        return kpis.npv.p90;
-      case 'P99':
-        return kpis.npv.p99;
-    }
-  };
-
-  const getIrrValue = () => {
-    switch (confidenceLevel) {
-      case 'P50':
-        return kpis.irr.p50;
-      case 'P90':
-        return kpis.irr.p90;
-      case 'P99':
-        return kpis.irr.p99;
-    }
-  };
-
-  const getH2Value = () => {
-    switch (confidenceLevel) {
-      case 'P50':
-        return kpis.annualH2Production.p50;
-      case 'P90':
-        return kpis.annualH2Production.p90;
-      case 'P99':
-        return kpis.annualH2Production.p99;
-    }
-  };
-
-  const npv = getNpvValue();
-  const irr = getIrrValue();
-  const h2Production = getH2Value();
-
+export default function KPICards({ kpis }: Props) {
   const cards = [
     {
       title: 'NPV',
-      value: formatCurrency(npv, true),
-      subtitle: `${confidenceLevel} 기준`,
-      color: npv >= 0 ? 'green' : 'red',
-      trend: npv >= 0 ? 'up' : 'down',
+      value: formatCurrency(kpis.npv.p50, true),
+      subValues: [
+        { label: 'P90', value: formatCurrency(kpis.npv.p90, true) },
+        { label: 'P99', value: formatCurrency(kpis.npv.p99, true) },
+      ],
+      subtitle: 'P50 기준',
+      color: kpis.npv.p50 >= 0 ? 'green' : 'red',
+      trend: kpis.npv.p50 >= 0 ? 'up' : 'down',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -64,10 +31,14 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
     },
     {
       title: 'IRR',
-      value: formatPercent(irr, 1),
-      subtitle: `${confidenceLevel} 기준`,
-      color: irr >= 8 ? 'green' : irr >= 5 ? 'yellow' : 'red',
-      trend: irr >= 8 ? 'up' : 'neutral',
+      value: formatPercent(kpis.irr.p50, 1),
+      subValues: [
+        { label: 'P90', value: formatPercent(kpis.irr.p90, 1) },
+        { label: 'P99', value: formatPercent(kpis.irr.p99, 1) },
+      ],
+      subtitle: 'P50 기준',
+      color: kpis.irr.p50 >= 8 ? 'green' : kpis.irr.p50 >= 5 ? 'yellow' : 'red',
+      trend: kpis.irr.p50 >= 8 ? 'up' : 'neutral',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -82,6 +53,9 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
     {
       title: 'DSCR',
       value: `${formatNumber(kpis.dscr.min, 2)}x`,
+      subValues: [
+        { label: '평균', value: `${formatNumber(kpis.dscr.avg, 2)}x` },
+      ],
       subtitle: '최저값',
       color: kpis.dscr.min >= 1.3 ? 'green' : kpis.dscr.min >= 1.1 ? 'yellow' : 'red',
       trend: kpis.dscr.min >= 1.3 ? 'up' : 'neutral',
@@ -98,8 +72,12 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
     },
     {
       title: '연간 생산량',
-      value: `${formatNumber(h2Production, 0)} 톤`,
-      subtitle: `${confidenceLevel} 기준`,
+      value: `${formatNumber(kpis.annualH2Production.p50, 0)} 톤`,
+      subValues: [
+        { label: 'P90', value: `${formatNumber(kpis.annualH2Production.p90, 0)} 톤` },
+        { label: 'P99', value: `${formatNumber(kpis.annualH2Production.p99, 0)} 톤` },
+      ],
+      subtitle: 'P50 기준',
       color: 'hydrogen',
       trend: 'up',
       icon: (
@@ -116,6 +94,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
     {
       title: 'VaR 95%',
       value: formatCurrency(kpis.var95, true),
+      subValues: [],
       subtitle: '최대 손실',
       color: 'purple',
       trend: 'down',
@@ -133,6 +112,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
     {
       title: 'LCOH',
       value: `${formatNumber(kpis.lcoh, 0)} 원/kg`,
+      subValues: [],
       subtitle: '수소 균등화 비용',
       color: kpis.lcoh <= 5000 ? 'green' : kpis.lcoh <= 7000 ? 'yellow' : 'red',
       trend: kpis.lcoh <= 5000 ? 'up' : 'neutral',
@@ -158,6 +138,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
       iconColor: 'text-emerald-600',
       text: 'text-emerald-700',
       glow: 'shadow-emerald-100',
+      subBg: 'bg-emerald-50/50',
     },
     red: {
       gradient: 'from-rose-500 to-red-600',
@@ -167,6 +148,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
       iconColor: 'text-rose-600',
       text: 'text-rose-700',
       glow: 'shadow-rose-100',
+      subBg: 'bg-rose-50/50',
     },
     yellow: {
       gradient: 'from-amber-500 to-yellow-600',
@@ -176,6 +158,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
       iconColor: 'text-amber-600',
       text: 'text-amber-700',
       glow: 'shadow-amber-100',
+      subBg: 'bg-amber-50/50',
     },
     hydrogen: {
       gradient: 'from-hydrogen-500 to-hydrogen-600',
@@ -185,6 +168,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
       iconColor: 'text-hydrogen-600',
       text: 'text-hydrogen-700',
       glow: 'shadow-hydrogen-100',
+      subBg: 'bg-hydrogen-50/50',
     },
     purple: {
       gradient: 'from-violet-500 to-purple-600',
@@ -194,6 +178,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
       iconColor: 'text-violet-600',
       text: 'text-violet-700',
       glow: 'shadow-violet-100',
+      subBg: 'bg-violet-50/50',
     },
   };
 
@@ -228,7 +213,7 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
                 {card.value}
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-dark-400">{card.subtitle}</span>
                 {card.trend === 'up' && (
                   <span className="flex items-center text-xs text-emerald-600">
@@ -245,6 +230,18 @@ export default function KPICards({ kpis, confidenceLevel }: Props) {
                   </span>
                 )}
               </div>
+
+              {/* P90/P99 서브 값 표시 */}
+              {card.subValues.length > 0 && (
+                <div className={`flex gap-2 pt-2 border-t border-dark-100/50`}>
+                  {card.subValues.map((sub) => (
+                    <div key={sub.label} className={`flex-1 px-1.5 py-1 rounded ${colors.subBg} text-center`}>
+                      <div className="text-[10px] text-dark-400 font-medium">{sub.label}</div>
+                      <div className="text-xs font-semibold text-dark-600 truncate">{sub.value}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         );

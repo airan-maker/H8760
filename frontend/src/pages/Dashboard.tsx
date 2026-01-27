@@ -75,7 +75,6 @@ const generateDemoResult = (): SimulationResult => {
 export default function Dashboard() {
   const { simulationId } = useParams();
   const { currentResult, currentInput, setCurrentResult, saveScenario, savedScenarios } = useSimulationContext();
-  const [confidenceLevel, setConfidenceLevel] = useState<'P50' | 'P90' | 'P99'>('P50');
   const [loading, setLoading] = useState(true);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
@@ -250,70 +249,91 @@ export default function Dashboard() {
   return (
     <div className="max-w-7xl mx-auto space-y-8">
       {/* 헤더 */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-6 border-b border-dark-100">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
+      <div className="flex flex-col gap-4 pb-6 border-b border-dark-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-hydrogen-500 to-primary-500 rounded-xl shadow-lg shadow-hydrogen-500/20">
               <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-dark-800">시뮬레이션 결과</h1>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-dark-800">시뮬레이션 결과</h1>
+              <p className="text-dark-500 text-sm hidden sm:block">프로젝트 분석 결과를 확인하고 인사이트를 얻으세요</p>
+            </div>
           </div>
-          <p className="text-dark-500">프로젝트 분석 결과를 확인하고 인사이트를 얻으세요</p>
+
+          {/* 데스크탑: 가로 버튼 */}
+          <div className="hidden sm:flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSaveModal(true)}
+              icon={
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+              }
+            >
+              저장
+            </Button>
+            <Link to="/compare">
+              <Button variant="outline" size="sm" icon={
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              }>
+                비교 ({savedScenarios.length})
+              </Button>
+            </Link>
+            <Link to="/config">
+              <Button variant="gradient" size="sm" icon={
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              }>
+                변수 조정
+              </Button>
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {/* 신뢰 수준 선택 */}
-          <div className="flex items-center gap-2 bg-dark-50 rounded-xl p-1">
-            {(['P50', 'P90', 'P99'] as const).map((level) => (
-              <button
-                key={level}
-                onClick={() => setConfidenceLevel(level)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                  confidenceLevel === level
-                    ? 'bg-white text-hydrogen-700 shadow-sm'
-                    : 'text-dark-500 hover:text-dark-700'
-                }`}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
+
+        {/* 모바일: 그리드 버튼 */}
+        <div className="grid grid-cols-3 gap-2 sm:hidden">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setShowSaveModal(true)}
-            icon={
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-            }
+            className="flex-col gap-1 py-3"
           >
-            시나리오 저장
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+            <span className="text-xs">저장</span>
           </Button>
-          <Link to="/compare">
-            <Button variant="outline" icon={
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Link to="/compare" className="contents">
+            <Button variant="outline" size="sm" className="flex-col gap-1 py-3">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-            }>
-              비교 ({savedScenarios.length})
+              <span className="text-xs">비교 ({savedScenarios.length})</span>
             </Button>
           </Link>
-          <Link to="/config">
-            <Button variant="gradient" icon={
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <Link to="/config" className="contents">
+            <Button variant="gradient" size="sm" className="flex-col gap-1 py-3">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
-            }>
-              변수 조정
+              <span className="text-xs">변수 조정</span>
             </Button>
           </Link>
         </div>
 
         {/* 저장 성공 알림 */}
         {saveSuccess && (
-          <div className="absolute top-full mt-2 right-0 bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in">
+          <div className="fixed top-20 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in z-50">
             시나리오가 저장되었습니다
           </div>
         )}
@@ -325,7 +345,7 @@ export default function Dashboard() {
           <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">핵심 지표</span>
           <span className="flex-1 h-px bg-dark-100"></span>
         </div>
-        <KPICards kpis={result.kpis} confidenceLevel={confidenceLevel} />
+        <KPICards kpis={result.kpis} confidenceLevel="P50" />
         {/* KPI 계산 로직 설명 */}
         <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
           <p className="font-semibold mb-3 text-gray-600">KPI 계산 로직 (financial.py, monte_carlo.py)</p>
