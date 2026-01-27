@@ -1,8 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, Button } from '../components/common';
 import { formatCurrency, formatPercent, formatNumber } from '../utils/formatters';
 import { useSimulationContext, SavedScenario } from '../contexts/SimulationContext';
+
+// 정렬 옵션 타입
+type SortField = 'createdAt' | 'npv' | 'irr' | 'lcoh' | 'h2Production';
+type SortOrder = 'asc' | 'desc';
 
 // 비교용 시나리오 뷰 타입
 interface ScenarioView {
@@ -13,6 +17,7 @@ interface ScenarioView {
   irr: number;
   lcoh: number;
   h2Production: number;
+  createdAt?: string;
   isDemo?: boolean;
 }
 
@@ -59,19 +64,57 @@ const convertToView = (scenario: SavedScenario): ScenarioView => ({
   irr: scenario.result.kpis.irr.p50,
   lcoh: scenario.result.kpis.lcoh,
   h2Production: scenario.result.kpis.annualH2Production.p50,
+  createdAt: scenario.createdAt,
   isDemo: false,
 });
+
+// 정렬 옵션
+const sortOptions: { value: SortField; label: string }[] = [
+  { value: 'createdAt', label: '생성일' },
+  { value: 'npv', label: 'NPV' },
+  { value: 'irr', label: 'IRR' },
+  { value: 'lcoh', label: 'LCOH' },
+  { value: 'h2Production', label: '생산량' },
+];
 
 export default function ScenarioCompare() {
   const { savedScenarios, deleteScenario, loadScenario } = useSimulationContext();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [sortField, setSortField] = useState<SortField>('createdAt');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
   // 저장된 시나리오를 뷰 형식으로 변환
   const userScenarios: ScenarioView[] = savedScenarios.map(convertToView);
 
+  // 정렬된 시나리오
+  const sortedUserScenarios = useMemo(() => {
+    const sorted = [...userScenarios].sort((a, b) => {
+      let comparison = 0;
+      switch (sortField) {
+        case 'createdAt':
+          comparison = (a.createdAt || '').localeCompare(b.createdAt || '');
+          break;
+        case 'npv':
+          comparison = a.npv - b.npv;
+          break;
+        case 'irr':
+          comparison = a.irr - b.irr;
+          break;
+        case 'lcoh':
+          comparison = a.lcoh - b.lcoh;
+          break;
+        case 'h2Production':
+          comparison = a.h2Production - b.h2Production;
+          break;
+      }
+      return sortOrder === 'asc' ? comparison : -comparison;
+    });
+    return sorted;
+  }, [userScenarios, sortField, sortOrder]);
+
   // 저장된 시나리오가 없으면 데모 시나리오 표시
-  const scenarios = userScenarios.length > 0 ? userScenarios : demoScenarios;
+  const scenarios = sortedUserScenarios.length > 0 ? sortedUserScenarios : demoScenarios;
   const isShowingDemo = userScenarios.length === 0;
 
   const selectedScenarios = scenarios.filter((s) => selectedIds.includes(s.id));
@@ -79,9 +122,14 @@ export default function ScenarioCompare() {
   const toggleScenario = (id: string) => {
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((i) => i !== id));
-    } else if (selectedIds.length < 4) {
+    } else if (selectedIds.length < 6) {
       setSelectedIds([...selectedIds, id]);
     }
+  };
+
+  // 정렬 토글
+  const toggleSortOrder = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
   };
 
   const handleDelete = async (id: string) => {
@@ -160,11 +208,43 @@ export default function ScenarioCompare() {
       <Card
         variant="gradient"
         title="시나리오 선택"
-        description="비교할 시나리오를 선택하세요 (최대 4개)"
+        description={`비교할 시나리오를 선택하세요 (최대 6개) · 총 ${savedScenarios.length}개 저장됨`}
         icon={
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
+        }
+        action={
+          !isShowingDemo && (
+            <div className="flex items-center gap-2">
+              {/* 정렬 기준 선택 */}
+              <select
+                value={sortField}
+                onChange={(e) => setSortField(e.target.value as SortField)}
+                className="text-sm border border-dark-200 rounded-lg px-3 py-1.5 bg-white focus:ring-2 focus:ring-hydrogen-500/20 focus:border-hydrogen-500"
+              >
+                {sortOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              {/* 정렬 방향 버튼 */}
+              <button
+                onClick={toggleSortOrder}
+                className="p-1.5 border border-dark-200 rounded-lg hover:bg-dark-50 transition-colors"
+                title={sortOrder === 'asc' ? '오름차순' : '내림차순'}
+              >
+                {sortOrder === 'asc' ? (
+                  <svg className="w-5 h-5 text-dark-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5 text-dark-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h9m5-4v12m0 0l-4-4m4 4l4-4" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          )
         }
       >
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -471,7 +551,7 @@ export default function ScenarioCompare() {
               </svg>
             </div>
             <p className="text-dark-600 font-medium mb-1">비교할 시나리오를 선택하세요</p>
-            <p className="text-sm text-dark-400">위에서 최대 4개의 시나리오를 선택할 수 있습니다</p>
+            <p className="text-sm text-dark-400">위에서 최대 6개의 시나리오를 선택할 수 있습니다</p>
           </div>
         </Card>
       )}
