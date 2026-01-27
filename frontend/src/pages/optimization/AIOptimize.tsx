@@ -114,8 +114,7 @@ export default function AIOptimize() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-dark-900 flex items-center gap-2">
-            <SparklesIcon className="w-7 h-7 text-hydrogen-500" />
+          <h1 className="text-2xl font-bold text-dark-900">
             AI 기반 최적화
           </h1>
           <p className="text-dark-500 mt-1">
