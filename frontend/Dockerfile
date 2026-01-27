@@ -4,13 +4,19 @@ WORKDIR /app
 
 # Install dependencies
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN npm ci
 
 # Copy application code
 COPY . .
 
-# Expose port
-EXPOSE 5173
+# Build the application
+RUN npm run build
 
-# Run the development server
-CMD ["npm", "run", "dev", "--", "--host"]
+# Install serve globally
+RUN npm install -g serve
+
+# Expose port
+EXPOSE 8080
+
+# Serve the built application
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-8080}"]
