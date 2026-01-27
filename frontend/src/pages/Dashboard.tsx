@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/common';
 import { KPICards } from '../components/dashboard';
 import {
@@ -13,6 +13,7 @@ import { AIInsightsPanel, SectionExplainer } from '../components/analysis';
 import type { SimulationResult } from '../types';
 import type { SimulationContext } from '../types/analysis';
 import { useSimulationContext } from '../contexts/SimulationContext';
+import { useAuth } from '../contexts/AuthContext';
 
 // 데모용 더미 데이터
 const generateDemoResult = (): SimulationResult => {
@@ -74,11 +75,29 @@ const generateDemoResult = (): SimulationResult => {
 
 export default function Dashboard() {
   const { simulationId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const { currentResult, currentInput, setCurrentResult, saveScenario, savedScenarios } = useSimulationContext();
   const [loading, setLoading] = useState(true);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [scenarioName, setScenarioName] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // 저장 버튼 클릭 핸들러
+  const handleSaveClick = () => {
+    if (!user) {
+      setShowLoginModal(true);
+    } else {
+      setShowSaveModal(true);
+    }
+  };
+
+  // 로그인 페이지로 이동
+  const handleGoToLogin = () => {
+    setShowLoginModal(false);
+    navigate('/login', { state: { from: '/dashboard' } });
+  };
 
   // currentResult를 직접 사용 (로컬 state 제거)
   const result = currentResult;
@@ -268,7 +287,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowSaveModal(true)}
+              onClick={handleSaveClick}
               icon={
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -304,7 +323,7 @@ export default function Dashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowSaveModal(true)}
+            onClick={handleSaveClick}
             className="flex-col gap-1 py-3"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -458,6 +477,40 @@ export default function Dashboard() {
         </div>
         <AIInsightsPanel input={currentInput} result={result} />
       </section>
+
+      {/* 로그인 필요 모달 */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
+            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-hydrogen-100 rounded-full">
+              <svg className="w-6 h-6 text-hydrogen-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-dark-800 mb-2 text-center">로그인이 필요합니다</h3>
+            <p className="text-sm text-dark-500 mb-6 text-center">
+              시나리오를 저장하려면 로그인이 필요합니다.<br />
+              로그인하면 여러 기기에서 시나리오에 접근할 수 있습니다.
+            </p>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                fullWidth
+                onClick={() => setShowLoginModal(false)}
+              >
+                취소
+              </Button>
+              <Button
+                variant="gradient"
+                fullWidth
+                onClick={handleGoToLogin}
+              >
+                로그인하기
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 시나리오 저장 모달 */}
       {showSaveModal && (
