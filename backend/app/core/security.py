@@ -2,6 +2,7 @@
 Firebase 토큰 검증 모듈
 """
 import os
+import json
 from typing import Optional
 
 import firebase_admin
@@ -16,7 +17,20 @@ def initialize_firebase():
     if firebase_admin._apps:
         return  # 이미 초기화됨
 
-    # 서비스 계정 키 파일 경로
+    # 1. 환경 변수에서 서비스 계정 JSON 문자열 사용
+    if settings.FIREBASE_SERVICE_ACCOUNT_JSON:
+        try:
+            service_account_info = json.loads(settings.FIREBASE_SERVICE_ACCOUNT_JSON)
+            cred = credentials.Certificate(service_account_info)
+            firebase_admin.initialize_app(cred, {
+                "projectId": settings.FIREBASE_PROJECT_ID or service_account_info.get("project_id")
+            })
+            print("Firebase initialized with service account JSON from environment")
+            return
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse FIREBASE_SERVICE_ACCOUNT_JSON: {e}")
+
+    # 2. 서비스 계정 키 파일 경로
     service_account_path = os.path.join(
         os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
         "firebase-service-account.json"
@@ -28,11 +42,13 @@ def initialize_firebase():
         firebase_admin.initialize_app(cred, {
             "projectId": settings.FIREBASE_PROJECT_ID
         })
+        print("Firebase initialized with service account file")
     elif settings.FIREBASE_PROJECT_ID:
         # 프로젝트 ID만으로 초기화 (Cloud Run 등 환경)
         firebase_admin.initialize_app(options={
             "projectId": settings.FIREBASE_PROJECT_ID
         })
+        print("Firebase initialized with project ID only")
     else:
         raise RuntimeError(
             "Firebase 초기화 실패: 서비스 계정 키 파일이나 프로젝트 ID가 필요합니다."

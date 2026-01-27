@@ -23,6 +23,7 @@ class Settings(BaseSettings):
 
     # Firebase 설정
     FIREBASE_PROJECT_ID: Optional[str] = None
+    FIREBASE_SERVICE_ACCOUNT_JSON: Optional[str] = None  # JSON 문자열로 서비스 계정 키
 
     # 시뮬레이션 기본값
     DEFAULT_MONTE_CARLO_ITERATIONS: int = 10000
