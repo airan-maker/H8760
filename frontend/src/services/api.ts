@@ -10,8 +10,13 @@ import type {
 } from '../types';
 import { auth } from '../config/firebase';
 
+// Railway 배포 시 VITE_API_URL 환경변수 사용, 로컬에서는 프록시 사용
+const API_BASE_URL = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/api`
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
