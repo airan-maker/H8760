@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import projects, simulation, reports, data, auth, scenarios, analysis
+from app.api.routes import projects, simulation, reports, data, auth, scenarios, analysis, optimization
 from app.core.config import settings
 from app.core.database import create_tables
 
@@ -45,6 +45,7 @@ app.include_router(data.router, prefix="/api/data", tags=["data"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(scenarios.router, prefix="/api/scenarios", tags=["scenarios"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["analysis"])
+app.include_router(optimization.router, prefix="/api/optimization", tags=["optimization"])
 
 
 @app.get("/")

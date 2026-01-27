@@ -1,10 +1,16 @@
 import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 import {
   BeakerIcon,
   Cog6ToothIcon,
   ChartBarIcon,
   ArrowsRightLeftIcon,
   UserCircleIcon,
+  AdjustmentsHorizontalIcon,
+  ChevronDownIcon,
+  TableCellsIcon,
+  SparklesIcon,
+  ChartBarSquareIcon,
 } from '@heroicons/react/24/outline';
 import { useSimulationContext } from '../contexts/SimulationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -21,10 +27,19 @@ const navigation = [
   { name: '비교', href: '/compare', icon: ArrowsRightLeftIcon, description: '시나리오 비교' },
 ];
 
+const optimizationMenu = [
+  { name: 'Grid Search', href: '/optimization/grid', icon: TableCellsIcon, description: '변수 조합 전수 탐색' },
+  { name: 'AI 최적화', href: '/optimization/ai', icon: SparklesIcon, description: 'AI 기반 최적 조합 추천' },
+  { name: '민감도 탐색', href: '/optimization/sensitivity', icon: ChartBarSquareIcon, description: '영향력 큰 변수 집중 탐색' },
+];
+
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const { savedScenarios, currentResult } = useSimulationContext();
   const { user, loading: authLoading } = useAuth();
+  const [isOptimizationOpen, setIsOptimizationOpen] = useState(false);
+
+  const isOptimizationActive = location.pathname.startsWith('/optimization');
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
@@ -91,6 +106,52 @@ export default function Layout({ children }: LayoutProps) {
                   </Link>
                 );
               })}
+
+              {/* 최적화 드롭다운 메뉴 */}
+              <div className="relative">
+                <button
+                  onClick={() => setIsOptimizationOpen(!isOptimizationOpen)}
+                  onBlur={() => setTimeout(() => setIsOptimizationOpen(false), 150)}
+                  className={`
+                    group relative flex items-center px-4 py-2.5 rounded-xl text-sm font-medium
+                    transition-all duration-300
+                    ${
+                      isOptimizationActive
+                        ? 'bg-white text-hydrogen-700 shadow-md'
+                        : 'text-dark-500 hover:text-dark-800 hover:bg-white/60'
+                    }
+                  `}
+                >
+                  <AdjustmentsHorizontalIcon className={`w-4 h-4 mr-2 transition-colors ${isOptimizationActive ? 'text-hydrogen-600' : 'text-dark-400 group-hover:text-hydrogen-500'}`} />
+                  최적화
+                  <ChevronDownIcon className={`w-4 h-4 ml-1 transition-transform ${isOptimizationOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* 드롭다운 메뉴 */}
+                {isOptimizationOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                    {optimizationMenu.map((item) => {
+                      const isItemActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          className={`
+                            flex items-center px-4 py-2.5 text-sm transition-colors
+                            ${isItemActive ? 'bg-hydrogen-50 text-hydrogen-700' : 'text-dark-600 hover:bg-gray-50'}
+                          `}
+                        >
+                          <item.icon className={`w-4 h-4 mr-3 ${isItemActive ? 'text-hydrogen-600' : 'text-dark-400'}`} />
+                          <div>
+                            <div className="font-medium">{item.name}</div>
+                            <div className="text-xs text-dark-400">{item.description}</div>
+                          </div>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
 
             {/* 로그인/사용자 메뉴 */}
