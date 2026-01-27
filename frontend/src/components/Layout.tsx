@@ -300,15 +300,12 @@ export default function Layout({ children }: LayoutProps) {
       {/* Footer */}
       <footer className="mt-auto border-t border-dark-100/50 bg-white/50 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-sm font-medium text-dark-600">H8760</span>
-            <div className="flex items-center space-x-4 text-xs text-dark-400">
-              <span>v1.0.0</span>
-              <span className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                시스템 정상
-              </span>
-            </div>
+          <div className="flex items-center justify-center gap-4 text-xs text-dark-400">
+            <span>v1.0.0</span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+              시스템 정상
+            </span>
           </div>
         </div>
       </footer>

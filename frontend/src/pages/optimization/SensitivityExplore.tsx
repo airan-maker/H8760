@@ -192,14 +192,17 @@ export default function SensitivityExplore() {
                 <label className="block text-sm font-medium text-dark-600 mb-1">
                   등고선 해상도
                 </label>
-                <input
-                  type="range"
-                  min={5}
-                  max={25}
-                  value={resolution}
-                  onChange={(e) => setResolution(parseInt(e.target.value))}
-                  className="w-full"
-                />
+                <div className="relative py-2">
+                  <div className="absolute top-1/2 left-0 right-0 h-2 -translate-y-1/2 bg-gradient-to-r from-gray-200 via-gray-300 to-gray-200 rounded-full" />
+                  <input
+                    type="range"
+                    min={5}
+                    max={25}
+                    value={resolution}
+                    onChange={(e) => setResolution(parseInt(e.target.value))}
+                    className="relative w-full z-10"
+                  />
+                </div>
                 <div className="flex justify-between text-xs text-dark-400 mt-1">
                   <span>빠름 (5x5)</span>
                   <span className="font-medium text-dark-600">
