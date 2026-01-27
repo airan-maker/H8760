@@ -124,6 +124,54 @@ export default function AIOptimize() {
         </div>
       </div>
 
+      {/* 사용 가이드 */}
+      <div className="bg-gradient-to-r from-violet-50 to-fuchsia-50 rounded-2xl border border-violet-100 p-5">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-white rounded-xl shadow-sm">
+            <LightBulbIcon className="w-5 h-5 text-violet-600" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <h3 className="font-semibold text-dark-800">AI 최적화란?</h3>
+              <p className="text-sm text-dark-600 mt-1">
+                사용자가 원하는 <strong>목표 KPI</strong>를 설정하면, Claude AI가 민감도 분석 결과와 시뮬레이션 데이터를 분석하여
+                목표를 달성할 수 있는 최적의 파라미터 조합을 추천합니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-violet-700 mb-2">예시: 목표 설정</p>
+                <p className="text-sm text-dark-600">
+                  <span className="font-medium">NPV ≥ 200억원</span>, <span className="font-medium">IRR ≥ 12%</span><br/>
+                  <span className="font-medium">LCOH ≤ 5,000원/kg</span>
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  "이 조건을 동시에 만족하는 조합이 있을까?" AI가 찾아줍니다.
+                </p>
+              </div>
+
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-fuchsia-700 mb-2">AI가 추천하는 내용</p>
+                <p className="text-sm text-dark-600">
+                  <span className="font-medium">전해조 용량</span> 25MW,
+                  <span className="font-medium"> 수소가격</span> 7,000원/kg<br/>
+                  → 예상 NPV 250억, IRR 14.2%
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  추천 근거와 함께 여러 대안을 순위별로 제시합니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs text-dark-500 pt-1 border-t border-violet-100">
+              <strong>Tip:</strong> 먼저 시뮬레이션을 실행하여 기준 결과를 확보한 후, 그보다 나은 목표를 설정하면 효과적입니다.
+              "민감도 반영" 옵션을 켜면 영향력이 큰 변수 위주로 탐색합니다.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 좌측: 설정 패널 */}
         <div className="lg:col-span-1 space-y-6">

@@ -171,6 +171,53 @@ export default function GridSearch() {
         </div>
       </div>
 
+      {/* 사용 가이드 */}
+      <div className="bg-gradient-to-r from-hydrogen-50 to-primary-50 rounded-2xl border border-hydrogen-100 p-5">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-white rounded-xl shadow-sm">
+            <TableCellsIcon className="w-5 h-5 text-hydrogen-600" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <h3 className="font-semibold text-dark-800">Grid Search란?</h3>
+              <p className="text-sm text-dark-600 mt-1">
+                설정한 변수 범위 내에서 <strong>모든 조합</strong>을 시뮬레이션하여 최적의 파라미터 조합을 찾는 방법입니다.
+                예를 들어, 전해조 용량을 10~50MW (10MW 간격)로 설정하면 10, 20, 30, 40, 50MW 총 5개 케이스를 자동으로 계산합니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-hydrogen-700 mb-2">예시: 1개 변수 탐색</p>
+                <p className="text-sm text-dark-600">
+                  <span className="font-medium">전해조 용량</span> 10~50 MW, 스텝 10MW<br/>
+                  → 5개 조합 (10, 20, 30, 40, 50)
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  "어떤 규모가 수익성이 가장 좋을까?" 질문에 답을 얻을 수 있습니다.
+                </p>
+              </div>
+
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-primary-700 mb-2">예시: 2개 변수 탐색</p>
+                <p className="text-sm text-dark-600">
+                  <span className="font-medium">전해조 용량</span> 10~30 MW × <span className="font-medium">수소가격</span> 5000~7000 원/kg<br/>
+                  → 9개 조합 (3×3)
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  "규모와 판매가격의 조합 중 최적은?" 히트맵으로 시각화됩니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs text-dark-500 pt-1 border-t border-hydrogen-100">
+              <strong>Tip:</strong> 변수를 2개 선택하면 히트맵으로 시각화되어 최적 구간을 직관적으로 파악할 수 있습니다.
+              조합 수가 많으면 시간이 오래 걸리므로, 처음에는 큰 스텝으로 대략적인 범위를 찾은 후 좁혀가세요.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 좌측: 설정 패널 */}
         <div className="lg:col-span-1 space-y-6">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '../components/common';
 import {
   PresetSelector,
@@ -14,16 +14,20 @@ import { simulationApi } from '../services/api';
 import type { SimulationInput, SimulationResult } from '../types';
 import { useSimulationContext } from '../contexts/SimulationContext';
 
+type TabType = 'preset' | 'equipment' | 'cost' | 'market' | 'financial' | 'incentives' | 'risk';
+
 export default function SimulationConfig() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { projectId } = useParams();
-  const { currentInput, setCurrentInput, setCurrentResult, saveScenario, currentProject } = useSimulationContext();
+  const { currentInput, setCurrentInput, setCurrentResult } = useSimulationContext();
   const [input, setInput] = useState<SimulationInput>(currentInput);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'preset' | 'equipment' | 'cost' | 'market' | 'financial' | 'incentives' | 'risk'>('preset');
-  const [showSaveModal, setShowSaveModal] = useState(false);
-  const [scenarioName, setScenarioName] = useState('');
+
+  // location state에서 초기 탭 설정 (대시보드에서 '변수 조정' 클릭 시 'equipment' 탭으로)
+  const initialTab = (location.state as { initialTab?: TabType })?.initialTab || 'preset';
+  const [activeTab, setActiveTab] = useState<TabType>(initialTab);
 
   const handlePresetSelect = (presetInput: Partial<SimulationInput>) => {
     setInput((prev) => ({
@@ -180,16 +184,6 @@ export default function SimulationConfig() {
       setError('백엔드 서버에 연결할 수 없습니다. 데모 모드로 실행하시겠습니까?');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSaveScenario = async () => {
-    if (!scenarioName.trim()) return;
-    const description = `${input.equipment.electrolyzerCapacity} MW ${input.cost.electricitySource}, ${input.market.h2Price.toLocaleString()}원/kg`;
-    const saved = await saveScenario(scenarioName, description);
-    if (saved) {
-      setShowSaveModal(false);
-      setScenarioName('');
     }
   };
 
@@ -537,81 +531,11 @@ export default function SimulationConfig() {
               >
                 시뮬레이션 실행
               </Button>
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => setShowSaveModal(true)}
-                icon={
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                  </svg>
-                }
-              >
-                시나리오 저장
-              </Button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* 시나리오 저장 모달 */}
-      {showSaveModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-dark-800 mb-4">시나리오 저장</h3>
-            <p className="text-sm text-dark-500 mb-4">
-              현재 설정을 시나리오로 저장하여 나중에 비교할 수 있습니다.
-            </p>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-dark-700 mb-2">
-                시나리오 이름
-              </label>
-              <input
-                type="text"
-                value={scenarioName}
-                onChange={(e) => setScenarioName(e.target.value)}
-                placeholder="예: 기준 시나리오"
-                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-hydrogen-500/20 focus:border-hydrogen-500"
-                autoFocus
-              />
-            </div>
-            <div className="p-3 bg-dark-50 rounded-xl mb-4 text-sm text-dark-600">
-              <div className="flex justify-between mb-1">
-                <span>전해조 용량</span>
-                <span className="font-medium">{input.equipment.electrolyzerCapacity} MW</span>
-              </div>
-              <div className="flex justify-between mb-1">
-                <span>전력 구매</span>
-                <span className="font-medium">{input.cost.electricitySource}</span>
-              </div>
-              <div className="flex justify-between">
-                <span>수소 판매가</span>
-                <span className="font-medium">{input.market.h2Price.toLocaleString()}원/kg</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => {
-                  setShowSaveModal(false);
-                  setScenarioName('');
-                }}
-              >
-                취소
-              </Button>
-              <Button
-                variant="gradient"
-                fullWidth
-                onClick={handleSaveScenario}
-                disabled={!scenarioName.trim()}
-              >
-                저장
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

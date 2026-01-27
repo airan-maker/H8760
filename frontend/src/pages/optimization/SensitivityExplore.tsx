@@ -114,6 +114,55 @@ export default function SensitivityExplore() {
         </div>
       </div>
 
+      {/* 사용 가이드 */}
+      <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-100 p-5">
+        <div className="flex items-start gap-4">
+          <div className="p-2 bg-white rounded-xl shadow-sm">
+            <ChartBarSquareIcon className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <h3 className="font-semibold text-dark-800">민감도 탐색이란?</h3>
+              <p className="text-sm text-dark-600 mt-1">
+                프로젝트 수익성에 <strong>가장 큰 영향을 미치는 변수</strong>를 먼저 파악한 후,
+                해당 변수들의 조합에서 최적 영역을 등고선 차트로 시각화합니다.
+                "어디에 집중해야 할까?"에 대한 답을 제공합니다.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-amber-700 mb-2">Step 1: 민감도 순위 확인</p>
+                <p className="text-sm text-dark-600">
+                  1위: <span className="font-medium">수소가격</span> (영향도 35%)<br/>
+                  2위: <span className="font-medium">전력가격</span> (영향도 28%)<br/>
+                  3위: <span className="font-medium">CAPEX</span> (영향도 18%)
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  "어떤 변수가 NPV에 가장 큰 영향을 줄까?"
+                </p>
+              </div>
+
+              <div className="bg-white/60 rounded-xl p-3">
+                <p className="text-xs font-semibold text-orange-700 mb-2">Step 2: 등고선 탐색</p>
+                <p className="text-sm text-dark-600">
+                  <span className="font-medium">수소가격</span> × <span className="font-medium">전력가격</span> 조합에서<br/>
+                  NPV가 가장 높은 영역 = 빨간색 구간
+                </p>
+                <p className="text-xs text-dark-500 mt-2">
+                  "두 변수의 조합에서 최적 구간은 어디인가?"
+                </p>
+              </div>
+            </div>
+
+            <div className="text-xs text-dark-500 pt-1 border-t border-amber-100">
+              <strong>Tip:</strong> 변수를 선택하지 않고 실행하면 자동으로 영향력이 가장 큰 2개 변수를 선택합니다.
+              Grid Search보다 적은 계산으로 핵심 변수의 최적 영역을 빠르게 파악할 수 있습니다.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* 좌측: 설정 및 민감도 순위 */}
         <div className="lg:col-span-1 space-y-6">

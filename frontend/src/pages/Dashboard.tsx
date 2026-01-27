@@ -235,10 +235,8 @@ export default function Dashboard() {
       const saved = await saveScenario(scenarioName, description);
 
       if (saved) {
-        setShowSaveModal(false);
-        setScenarioName('');
         setSaveSuccess(true);
-        setTimeout(() => setSaveSuccess(false), 3000);
+        setScenarioName('');
       } else {
         setSaveError('시나리오 저장에 실패했습니다. 다시 시도해주세요.');
       }
@@ -248,6 +246,22 @@ export default function Dashboard() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // 저장 성공 후 모달 닫기
+  const handleCloseSaveModal = () => {
+    setShowSaveModal(false);
+    setSaveSuccess(false);
+    setScenarioName('');
+    setSaveError(null);
+  };
+
+  // 저장 성공 후 비교 페이지로 이동
+  const handleGoToCompare = () => {
+    setShowSaveModal(false);
+    setSaveSuccess(false);
+    setScenarioName('');
+    navigate('/compare');
   };
 
   if (loading) {
@@ -319,6 +333,7 @@ export default function Dashboard() {
           </Link>
           <Link
             to="/config"
+            state={{ initialTab: 'equipment' }}
             className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
           >
             <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -351,6 +366,7 @@ export default function Dashboard() {
           </Link>
           <Link
             to="/config"
+            state={{ initialTab: 'equipment' }}
             className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
           >
             <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -361,12 +377,6 @@ export default function Dashboard() {
           </Link>
         </div>
 
-        {/* 저장 성공 알림 */}
-        {saveSuccess && (
-          <div className="fixed top-20 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg animate-fade-in z-50">
-            시나리오가 저장되었습니다
-          </div>
-        )}
       </div>
 
       <div className="space-y-8">
@@ -529,79 +539,113 @@ export default function Dashboard() {
       {showSaveModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl">
-            <h3 className="text-lg font-bold text-dark-800 mb-4">시나리오 저장</h3>
-            <p className="text-sm text-dark-500 mb-4">
-              현재 시뮬레이션 결과를 시나리오로 저장하여 비교 분석에 활용할 수 있습니다.
-            </p>
+            {saveSuccess ? (
+              /* 저장 성공 화면 */
+              <>
+                <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full">
+                  <svg className="w-8 h-8 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-dark-800 mb-2 text-center">저장 완료!</h3>
+                <p className="text-sm text-dark-500 mb-6 text-center">
+                  시나리오가 성공적으로 저장되었습니다.<br />
+                  저장된 시나리오는 비교 페이지에서 확인할 수 있습니다.
+                </p>
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl mb-4 text-sm text-emerald-700 text-center">
+                  총 {savedScenarios.length}개의 시나리오가 저장되어 있습니다
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={handleCloseSaveModal}
+                  >
+                    닫기
+                  </Button>
+                  <Button
+                    variant="gradient"
+                    fullWidth
+                    onClick={handleGoToCompare}
+                  >
+                    비교 페이지로 이동
+                  </Button>
+                </div>
+              </>
+            ) : (
+              /* 저장 입력 화면 */
+              <>
+                <h3 className="text-lg font-bold text-dark-800 mb-4">시나리오 저장</h3>
+                <p className="text-sm text-dark-500 mb-4">
+                  현재 시뮬레이션 결과를 시나리오로 저장하여 비교 분석에 활용할 수 있습니다.
+                </p>
 
-            {/* 에러 메시지 */}
-            {saveError && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
-                {saveError}
-              </div>
+                {/* 에러 메시지 */}
+                {saveError && (
+                  <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-sm text-rose-700">
+                    {saveError}
+                  </div>
+                )}
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-dark-700 mb-2">
+                    시나리오 이름
+                  </label>
+                  <input
+                    type="text"
+                    value={scenarioName}
+                    onChange={(e) => {
+                      setScenarioName(e.target.value);
+                      setSaveError(null);
+                    }}
+                    placeholder="예: 기준 시나리오"
+                    className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-hydrogen-500/20 focus:border-hydrogen-500"
+                    autoFocus
+                    disabled={saving}
+                  />
+                </div>
+                <div className="p-3 bg-dark-50 rounded-xl mb-4 text-sm text-dark-600">
+                  <div className="flex justify-between mb-1">
+                    <span>NPV (P50)</span>
+                    <span className="font-medium">{(result.kpis.npv.p50 / 100000000).toFixed(0)}억원</span>
+                  </div>
+                  <div className="flex justify-between mb-1">
+                    <span>IRR (P50)</span>
+                    <span className="font-medium">{result.kpis.irr.p50.toFixed(1)}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>LCOH</span>
+                    <span className="font-medium">{result.kpis.lcoh.toLocaleString()}원/kg</span>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    variant="outline"
+                    fullWidth
+                    onClick={handleCloseSaveModal}
+                    disabled={saving}
+                  >
+                    취소
+                  </Button>
+                  <Button
+                    variant="gradient"
+                    fullWidth
+                    onClick={handleSaveScenario}
+                    disabled={!scenarioName.trim() || saving}
+                  >
+                    {saving ? (
+                      <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        저장 중...
+                      </span>
+                    ) : '저장'}
+                  </Button>
+                </div>
+              </>
             )}
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-dark-700 mb-2">
-                시나리오 이름
-              </label>
-              <input
-                type="text"
-                value={scenarioName}
-                onChange={(e) => {
-                  setScenarioName(e.target.value);
-                  setSaveError(null);
-                }}
-                placeholder="예: 기준 시나리오"
-                className="w-full px-4 py-3 border border-dark-200 rounded-xl focus:ring-2 focus:ring-hydrogen-500/20 focus:border-hydrogen-500"
-                autoFocus
-                disabled={saving}
-              />
-            </div>
-            <div className="p-3 bg-dark-50 rounded-xl mb-4 text-sm text-dark-600">
-              <div className="flex justify-between mb-1">
-                <span>NPV (P50)</span>
-                <span className="font-medium">{(result.kpis.npv.p50 / 100000000).toFixed(0)}억원</span>
-              </div>
-              <div className="flex justify-between mb-1">
-                <span>IRR (P50)</span>
-                <span className="font-medium">{result.kpis.irr.p50.toFixed(1)}%</span>
-              </div>
-              <div className="flex justify-between">
-                <span>LCOH</span>
-                <span className="font-medium">{result.kpis.lcoh.toLocaleString()}원/kg</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                fullWidth
-                onClick={() => {
-                  setShowSaveModal(false);
-                  setScenarioName('');
-                  setSaveError(null);
-                }}
-                disabled={saving}
-              >
-                취소
-              </Button>
-              <Button
-                variant="gradient"
-                fullWidth
-                onClick={handleSaveScenario}
-                disabled={!scenarioName.trim() || saving}
-              >
-                {saving ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    저장 중...
-                  </span>
-                ) : '저장'}
-              </Button>
-            </div>
           </div>
         </div>
       )}

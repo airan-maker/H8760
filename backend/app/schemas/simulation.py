@@ -75,7 +75,7 @@ class CostConfig(BaseModel):
         default="PPA", description="전력 구매 방식 - RENEWABLE: 재생에너지 직접 연계"
     )
     ppa_price: Optional[float] = Field(
-        default=100.0, ge=0, le=500, description="PPA 가격 (원/kWh) - 한국 산업용 평균 약 100원"
+        default=100.0, ge=0, le=1000, description="PPA 가격 (원/kWh) - 한국 산업용 평균 약 100원"
     )
 
 
