@@ -171,36 +171,102 @@ export default function AIOptimize() {
         </div>
       </div>
 
-      {/* 기준 시나리오 요약 */}
+      {/* 기준 시나리오 설정 (수정 가능) */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-dark-700">기준 시나리오 설정</h3>
-          <span className="text-xs text-dark-400">이 값을 기준으로 최적화합니다</span>
+          <span className="text-xs text-dark-400">값을 직접 수정할 수 있습니다</span>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 text-sm">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-sm">
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">전해조 용량</div>
-            <div className="font-semibold text-dark-700">{currentInput.equipment.electrolyzerCapacity} MW</div>
+            <label className="text-xs text-dark-400 block mb-1">전해조 용량</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={currentInput.equipment.electrolyzerCapacity}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  equipment: { ...currentInput.equipment, electrolyzerCapacity: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400">MW</span>
+            </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">효율</div>
-            <div className="font-semibold text-dark-700">{currentInput.equipment.electrolyzerEfficiency}%</div>
+            <label className="text-xs text-dark-400 block mb-1">효율</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={currentInput.equipment.electrolyzerEfficiency}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  equipment: { ...currentInput.equipment, electrolyzerEfficiency: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400">%</span>
+            </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">CAPEX</div>
-            <div className="font-semibold text-dark-700">{(currentInput.cost.capex / 1e8).toFixed(0)}억원</div>
+            <label className="text-xs text-dark-400 block mb-1">CAPEX</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={Math.round(currentInput.cost.capex / 1e8)}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  cost: { ...currentInput.cost, capex: (parseFloat(e.target.value) || 0) * 1e8 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400">억</span>
+            </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">전력가격</div>
-            <div className="font-semibold text-dark-700">{currentInput.cost.ppaPrice || 100}원/kWh</div>
+            <label className="text-xs text-dark-400 block mb-1">전력가격</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={currentInput.cost.ppaPrice || 100}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  cost: { ...currentInput.cost, ppaPrice: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400 whitespace-nowrap">원/kWh</span>
+            </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">수소가격</div>
-            <div className="font-semibold text-dark-700">{currentInput.market.h2Price.toLocaleString()}원/kg</div>
+            <label className="text-xs text-dark-400 block mb-1">수소가격</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={currentInput.market.h2Price}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  market: { ...currentInput.market, h2Price: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400 whitespace-nowrap">원/kg</span>
+            </div>
           </div>
           <div className="bg-gray-50 rounded-lg p-2">
-            <div className="text-xs text-dark-400">할인율</div>
-            <div className="font-semibold text-dark-700">{currentInput.financial.discountRate}%</div>
+            <label className="text-xs text-dark-400 block mb-1">할인율</label>
+            <div className="flex items-center gap-1">
+              <input
+                type="number"
+                value={currentInput.financial.discountRate}
+                onChange={(e) => setCurrentInput({
+                  ...currentInput,
+                  financial: { ...currentInput.financial, discountRate: parseFloat(e.target.value) || 0 }
+                })}
+                className="w-full px-2 py-1 text-sm font-semibold text-dark-700 bg-white border border-gray-200 rounded focus:ring-1 focus:ring-hydrogen-500 focus:border-hydrogen-500"
+              />
+              <span className="text-xs text-dark-400">%</span>
+            </div>
           </div>
         </div>
       </div>
