@@ -81,13 +81,41 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEYS.INPUT);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // 기존 데이터에 없는 필드(예: incentives)는 기본값으로 채움
+        // 기존 데이터에 없는 필드는 기본값으로 채움 (깊은 병합)
         return {
           ...defaultSimulationInput,
           ...parsed,
+          equipment: {
+            ...defaultSimulationInput.equipment,
+            ...(parsed.equipment || {}),
+          },
+          cost: {
+            ...defaultSimulationInput.cost,
+            ...(parsed.cost || {}),
+          },
+          market: {
+            ...defaultSimulationInput.market,
+            ...(parsed.market || {}),
+          },
+          financial: {
+            ...defaultSimulationInput.financial,
+            ...(parsed.financial || {}),
+          },
+          tax: {
+            ...defaultSimulationInput.tax,
+            ...(parsed.tax || {}),
+          },
           incentives: {
             ...defaultSimulationInput.incentives,
             ...(parsed.incentives || {}),
+          },
+          riskWeights: {
+            ...defaultSimulationInput.riskWeights,
+            ...(parsed.riskWeights || {}),
+          },
+          monteCarlo: {
+            ...defaultSimulationInput.monteCarlo,
+            ...(parsed.monteCarlo || {}),
           },
         };
       }
@@ -162,8 +190,8 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
           name: s.name,
           description: s.description || '',
           createdAt: s.createdAt,
-          input: s.inputConfig as SimulationInput,
-          result: s.result as SimulationResult,
+          input: s.inputConfig as unknown as SimulationInput,
+          result: s.result as unknown as SimulationResult,
           isServerSynced: true,
         }))
       );
@@ -228,8 +256,8 @@ export function SimulationProvider({ children }: { children: ReactNode }) {
           name: created.name,
           description: created.description || '',
           createdAt: created.createdAt,
-          input: created.inputConfig as SimulationInput,
-          result: created.result as SimulationResult,
+          input: created.inputConfig as unknown as SimulationInput,
+          result: created.result as unknown as SimulationResult,
           isServerSynced: true,
         };
 

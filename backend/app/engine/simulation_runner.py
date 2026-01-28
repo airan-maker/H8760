@@ -12,13 +12,25 @@ from typing import List
 def log_progress(step: str, detail: str = "", value: str = ""):
     """시뮬레이션 진행 상황 로깅"""
     timestamp = time.strftime("%H:%M:%S")
-    if value:
-        print(f"[{timestamp}] ⚡ {step}: {detail} = {value}", flush=True)
-    elif detail:
-        print(f"[{timestamp}] ⚡ {step}: {detail}", flush=True)
-    else:
-        print(f"[{timestamp}] ⚡ {step}", flush=True)
-    sys.stdout.flush()
+    try:
+        if value:
+            print(f"[{timestamp}] > {step}: {detail} = {value}", flush=True)
+        elif detail:
+            print(f"[{timestamp}] > {step}: {detail}", flush=True)
+        else:
+            print(f"[{timestamp}] > {step}", flush=True)
+        sys.stdout.flush()
+    except UnicodeEncodeError:
+        # Windows 환경에서 인코딩 문제 발생 시 ASCII로 대체
+        try:
+            msg = f"[{timestamp}] > {step}"
+            if detail:
+                msg += f": {detail}"
+            if value:
+                msg += f" = {value}"
+            print(msg.encode('ascii', 'replace').decode('ascii'), flush=True)
+        except Exception:
+            pass  # 로깅 실패 시 무시
 
 from app.schemas.simulation import SimulationInput
 from app.schemas.result import (

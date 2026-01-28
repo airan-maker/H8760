@@ -374,13 +374,13 @@ function ScenarioCard({
         <div className="bg-gray-50 rounded-lg p-2 text-center">
           <p className="text-xs text-dark-400">NPV</p>
           <p className="text-sm font-semibold text-dark-900">
-            {formatNumber(result.kpis.npv / 1e8, 1)}억
+            {formatNumber(result.kpis.npv.p50 / 1e8, 1)}억
           </p>
         </div>
         <div className="bg-gray-50 rounded-lg p-2 text-center">
           <p className="text-xs text-dark-400">IRR</p>
           <p className="text-sm font-semibold text-dark-900">
-            {formatNumber(result.kpis.irr, 1)}%
+            {formatNumber(result.kpis.irr.p50, 1)}%
           </p>
         </div>
         <div className="bg-gray-50 rounded-lg p-2 text-center">
