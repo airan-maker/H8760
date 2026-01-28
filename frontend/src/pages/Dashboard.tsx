@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '../components/common';
 import { KPICards } from '../components/dashboard';
@@ -10,10 +10,214 @@ import {
   CashflowChart,
 } from '../components/charts';
 import { AIInsightsPanel, SectionExplainer } from '../components/analysis';
-import type { SimulationResult } from '../types';
+import type { SimulationResult, SimulationInput } from '../types';
 import type { SimulationContext } from '../types/analysis';
 import { useSimulationContext } from '../contexts/SimulationContext';
 import { useAuth } from '../contexts/AuthContext';
+
+// CSV 내보내기를 위한 유틸리티 함수
+const generateSimulationCSV = (input: SimulationInput, result: SimulationResult): string => {
+  const lines: string[] = [];
+  const addSection = (title: string) => {
+    lines.push('');
+    lines.push(`=== ${title} ===`);
+  };
+  const addRow = (label: string, value: string | number, unit?: string, formula?: string) => {
+    const formattedValue = typeof value === 'number'
+      ? value.toLocaleString('ko-KR')
+      : value;
+    lines.push(`"${label}","${formattedValue}","${unit || ''}","${formula || ''}"`);
+  };
+
+  // 헤더
+  lines.push('항목,값,단위,계산식/설명');
+
+  // ========== 1. 시뮬레이션 기본 정보 ==========
+  addSection('1. 시뮬레이션 기본 정보');
+  addRow('시뮬레이션 ID', result.simulationId);
+  addRow('생성 일시', new Date().toLocaleString('ko-KR'));
+  addRow('시뮬레이션 상태', result.status);
+
+  // ========== 2. 입력 변수 - 설비 사양 ==========
+  addSection('2. 입력 변수 - 설비 사양');
+  addRow('전해조 용량', input.equipment.electrolyzerCapacity, 'MW', '수소 생산 설비 규모');
+  addRow('전해조 효율', input.equipment.electrolyzerEfficiency, '%', '전기 → 수소 변환 효율 (LHV 기준)');
+  addRow('비소비량', input.equipment.specificConsumption, 'kWh/kg', '수소 1kg 생산에 필요한 전력량');
+  addRow('효율 저하율', input.equipment.degradationRate, '%/년', '연간 성능 저하율');
+  addRow('스택 수명', input.equipment.stackLifetime, '시간', '스택 교체 주기');
+  addRow('연간 가동률', input.equipment.annualAvailability, '%', '계획/비계획 정지 반영');
+
+  // ========== 3. 입력 변수 - 비용 구조 ==========
+  addSection('3. 입력 변수 - 비용 구조');
+  addRow('CAPEX (초기투자비)', input.cost.capex, '원', '설비 구매 및 설치 비용');
+  addRow('CAPEX (억원)', Math.round(input.cost.capex / 100000000), '억원');
+  addRow('OPEX 비율', input.cost.opexRatio, '% of CAPEX', '연간 운영비 = CAPEX × OPEX비율');
+  addRow('연간 OPEX', Math.round(input.cost.capex * input.cost.opexRatio / 100), '원');
+  addRow('스택 교체비용', input.cost.stackReplacementCost, '원');
+  addRow('전력 구매 방식', input.cost.electricitySource);
+  addRow('PPA 가격', input.cost.ppaPrice || 0, '원/kWh', '전력 구매 단가');
+
+  // ========== 4. 입력 변수 - 시장 조건 ==========
+  addSection('4. 입력 변수 - 시장 조건');
+  addRow('수소 판매 가격', input.market.h2Price, '원/kg', '판매 단가');
+  addRow('수소 가격 상승률', input.market.h2PriceEscalation, '%/년', '연간 가격 인상율');
+  addRow('전력 가격 시나리오', input.market.electricityPriceScenario);
+
+  // ========== 5. 입력 변수 - 재무 조건 ==========
+  addSection('5. 입력 변수 - 재무 조건');
+  addRow('할인율', input.financial.discountRate, '%', 'NPV 계산에 사용되는 WACC');
+  addRow('프로젝트 기간', input.financial.projectLifetime, '년');
+  addRow('부채 비율', input.financial.debtRatio, '%', '총 투자 대비 차입금 비율');
+  addRow('차입금', Math.round(input.cost.capex * input.financial.debtRatio / 100), '원', 'CAPEX × 부채비율');
+  addRow('자기자본', Math.round(input.cost.capex * (100 - input.financial.debtRatio) / 100), '원', 'CAPEX × (1 - 부채비율)');
+  addRow('대출 이자율', input.financial.interestRate, '%');
+  addRow('대출 기간', input.financial.loanTenor, '년');
+
+  // ========== 6. 입력 변수 - 인센티브 ==========
+  addSection('6. 입력 변수 - 인센티브');
+  addRow('투자세액공제(ITC) 활성화', input.incentives.itcEnabled ? '예' : '아니오');
+  addRow('ITC 비율', input.incentives.itcRate, '%', 'CAPEX 대비 세액공제율');
+  addRow('ITC 금액', input.incentives.itcEnabled ? Math.round(input.cost.capex * input.incentives.itcRate / 100) : 0, '원');
+  addRow('생산세액공제(PTC) 활성화', input.incentives.ptcEnabled ? '예' : '아니오');
+  addRow('PTC 금액', input.incentives.ptcAmount, '원/kg');
+  addRow('PTC 적용 기간', input.incentives.ptcDuration, '년');
+  addRow('CAPEX 보조금', input.incentives.capexSubsidy, '원');
+  addRow('CAPEX 보조금율', input.incentives.capexSubsidyRate, '%');
+  addRow('운영 보조금', input.incentives.operatingSubsidy, '원/kg');
+  addRow('운영 보조금 기간', input.incentives.operatingSubsidyDuration, '년');
+  addRow('탄소배출권 활성화', input.incentives.carbonCreditEnabled ? '예' : '아니오');
+  addRow('탄소배출권 가격', input.incentives.carbonCreditPrice, '원/kg');
+  addRow('청정수소인증 활성화', input.incentives.cleanH2CertificationEnabled ? '예' : '아니오');
+  addRow('청정수소 프리미엄', input.incentives.cleanH2Premium, '원/kg');
+
+  // ========== 7. 입력 변수 - 몬테카를로 설정 ==========
+  addSection('7. 입력 변수 - 몬테카를로 설정');
+  addRow('시뮬레이션 반복 횟수', input.monteCarlo.iterations, '회');
+  addRow('기상 변동성 (σ)', input.monteCarlo.weatherSigma, '', '표준편차');
+  addRow('가격 변동성 (σ)', input.monteCarlo.priceSigma, '', '표준편차');
+  addRow('기상 변동성 반영', input.riskWeights.weatherVariability ? '예' : '아니오');
+  addRow('가격 변동성 반영', input.riskWeights.priceVolatility ? '예' : '아니오');
+  addRow('신뢰 수준', input.riskWeights.confidenceLevel);
+
+  // ========== 8. 계산 공식 설명 ==========
+  addSection('8. 핵심 계산 공식');
+  addRow('수소 생산량', '전력(MW) × 1000 × 가동시간 × 효율 / 비소비량', 'kg', 'H2 = P × 1000 × h × η / SEC');
+  addRow('연간 생산량', `${input.equipment.electrolyzerCapacity} × 1000 × 8760 × ${input.equipment.annualAvailability}% / ${input.equipment.specificConsumption}`, 'kg/년');
+  addRow('NPV 공식', 'NPV = -CAPEX + Σ(CF_t / (1+r)^t)', '원', '순현재가치 = 초기투자 + 미래현금흐름의 현재가치 합');
+  addRow('IRR 공식', 'NPV = 0 이 되는 r', '%', '내부수익률 (Newton-Raphson 방식으로 계산)');
+  addRow('LCOH 공식', 'LCOH = Σ(비용_PV) / Σ(생산량_PV)', '원/kg', '균등화 수소 비용');
+  addRow('DSCR 공식', 'DSCR = EBITDA / 원리금상환액', '', '부채상환비율');
+  addRow('원리금균등상환', 'PMT = P × r(1+r)^n / ((1+r)^n - 1)', '원/년', 'P=원금, r=이자율, n=기간');
+  addRow('VaR 95%', '몬테카를로 분포의 5번째 백분위수', '원', '5% 확률로 발생 가능한 최대 손실');
+
+  // ========== 9. KPI 결과 ==========
+  addSection('9. KPI 결과');
+  addRow('NPV (P50)', result.kpis.npv.p50, '원', '50% 확률로 이 값 이상');
+  addRow('NPV (P50) 억원', Math.round(result.kpis.npv.p50 / 100000000), '억원');
+  addRow('NPV (P90)', result.kpis.npv.p90, '원', '90% 확률로 이 값 이상');
+  addRow('NPV (P99)', result.kpis.npv.p99, '원', '99% 확률로 이 값 이상');
+  addRow('IRR (P50)', result.kpis.irr.p50, '%');
+  addRow('IRR (P90)', result.kpis.irr.p90, '%');
+  addRow('IRR (P99)', result.kpis.irr.p99, '%');
+  addRow('DSCR (최소)', result.kpis.dscr.min, '', '최소 부채상환비율');
+  addRow('DSCR (평균)', result.kpis.dscr.avg, '', '평균 부채상환비율');
+  addRow('투자회수기간', result.kpis.paybackPeriod, '년');
+  addRow('VaR 95%', result.kpis.var95, '원', '최악 시나리오 손실');
+  addRow('LCOH', result.kpis.lcoh, '원/kg', '균등화 수소 비용');
+  addRow('연간 수소 생산량 (P50)', result.kpis.annualH2Production.p50, '톤/년');
+  addRow('연간 수소 생산량 (P90)', result.kpis.annualH2Production.p90, '톤/년');
+  addRow('연간 수소 생산량 (P99)', result.kpis.annualH2Production.p99, '톤/년');
+
+  // ========== 10. 연간 현금흐름 ==========
+  addSection('10. 연간 현금흐름 상세');
+  lines.push('년도,수익(원),운영비(원),부채상환(원),순현금흐름(원),누적현금흐름(원)');
+  result.yearlyCashflow.forEach(cf => {
+    lines.push(`${cf.year},${cf.revenue},${cf.opex},${cf.debtService},${cf.netCashflow},${cf.cumulativeCashflow}`);
+  });
+
+  // ========== 11. 민감도 분석 ==========
+  addSection('11. 민감도 분석 결과');
+  lines.push('변수,기준 NPV(원),하한 NPV(원),상한 NPV(원),하한 변화율(%),상한 변화율(%)');
+  result.sensitivity.forEach(s => {
+    const varName = {
+      'electricity_price': '전력 가격',
+      'h2_price': '수소 가격',
+      'availability': '가동률',
+      'efficiency': '효율',
+      'capex': 'CAPEX'
+    }[s.variable] || s.variable;
+    lines.push(`"${varName}",${s.baseCase},${s.lowCase},${s.highCase},${s.lowChangePct},${s.highChangePct}`);
+  });
+
+  // ========== 12. 리스크 폭포수 ==========
+  addSection('12. 리스크 폭포수');
+  lines.push('요인,영향(원),영향(억원)');
+  result.riskWaterfall.forEach(r => {
+    lines.push(`"${r.factor}",${r.impact},${Math.round(r.impact / 100000000)}`);
+  });
+
+  // ========== 13. NPV 분포 히스토그램 ==========
+  addSection('13. NPV 분포 (몬테카를로)');
+  lines.push('구간(원),빈도');
+  result.distributions.npvHistogram.forEach(bin => {
+    lines.push(`${bin.bin},${bin.count}`);
+  });
+
+  // ========== 14. 검증용 중간 계산값 ==========
+  addSection('14. 검증용 중간 계산값');
+  const annualProduction = input.equipment.electrolyzerCapacity * 1000 * 8760 * (input.equipment.annualAvailability / 100) / input.equipment.specificConsumption;
+  const annualRevenue = annualProduction * input.market.h2Price;
+  const annualOpex = input.cost.capex * (input.cost.opexRatio / 100);
+  const annualElecCost = annualProduction * input.equipment.specificConsumption * (input.cost.ppaPrice || 0);
+  const grossMargin = annualRevenue - annualElecCost - annualOpex;
+  const debtAmount = input.cost.capex * (input.financial.debtRatio / 100);
+  const equityAmount = input.cost.capex - debtAmount;
+
+  addRow('연간 이론 생산량', Math.round(annualProduction), 'kg', `${input.equipment.electrolyzerCapacity}MW × 8760h × ${input.equipment.annualAvailability}% / ${input.equipment.specificConsumption}kWh/kg`);
+  addRow('연간 이론 생산량', Math.round(annualProduction / 1000), '톤');
+  addRow('연간 전력 소비량', Math.round(annualProduction * input.equipment.specificConsumption), 'kWh', '생산량 × 비소비량');
+  addRow('연간 전력 소비량', Math.round(annualProduction * input.equipment.specificConsumption / 1000000), 'MWh');
+  addRow('연간 예상 수익', Math.round(annualRevenue), '원', '생산량 × 수소가격');
+  addRow('연간 예상 수익', Math.round(annualRevenue / 100000000), '억원');
+  addRow('연간 전력비', Math.round(annualElecCost), '원', '전력소비 × PPA가격');
+  addRow('연간 전력비', Math.round(annualElecCost / 100000000), '억원');
+  addRow('연간 OPEX', Math.round(annualOpex), '원');
+  addRow('연간 OPEX', Math.round(annualOpex / 100000000), '억원');
+  addRow('연간 총비용', Math.round(annualElecCost + annualOpex), '원', '전력비 + OPEX');
+  addRow('연간 총비용', Math.round((annualElecCost + annualOpex) / 100000000), '억원');
+  addRow('연간 매출총이익', Math.round(grossMargin), '원', '수익 - 전력비 - OPEX');
+  addRow('연간 매출총이익', Math.round(grossMargin / 100000000), '억원');
+  addRow('차입금 (Debt)', Math.round(debtAmount), '원');
+  addRow('차입금 (Debt)', Math.round(debtAmount / 100000000), '억원');
+  addRow('자기자본 (Equity)', Math.round(equityAmount), '원');
+  addRow('자기자본 (Equity)', Math.round(equityAmount / 100000000), '억원');
+
+  // 단순 NPV 계산 (검증용)
+  const r = input.financial.discountRate / 100;
+  let simpleNPV = -input.cost.capex;
+  for (let t = 1; t <= input.financial.projectLifetime; t++) {
+    simpleNPV += grossMargin / Math.pow(1 + r, t);
+  }
+  addRow('단순 NPV (검증용)', Math.round(simpleNPV), '원', '부채상환/세금 미반영');
+  addRow('단순 NPV (검증용)', Math.round(simpleNPV / 100000000), '억원');
+
+  return lines.join('\n');
+};
+
+// CSV 다운로드 함수
+const downloadCSV = (content: string, filename: string) => {
+  // BOM 추가 (Excel에서 한글 깨짐 방지)
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 // 데모용 더미 데이터
 const generateDemoResult = (): SimulationResult => {
@@ -85,6 +289,16 @@ export default function Dashboard() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  // CSV 내보내기 핸들러
+  const handleExportCSV = useCallback(() => {
+    if (!currentInput || !result) return;
+
+    const csvContent = generateSimulationCSV(currentInput, result);
+    const timestamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const filename = `시뮬레이션_결과_${timestamp}.csv`;
+    downloadCSV(csvContent, filename);
+  }, [currentInput, result]);
 
   // 저장 버튼 클릭 핸들러
   const handleSaveClick = () => {
@@ -312,7 +526,7 @@ export default function Dashboard() {
         </div>
 
         {/* 액션 탭 - 모바일: 그리드 */}
-        <div className="grid grid-cols-3 gap-1.5 p-1.5 bg-dark-50 rounded-2xl sm:hidden">
+        <div className="grid grid-cols-4 gap-1.5 p-1.5 bg-dark-50 rounded-2xl sm:hidden">
           <button
             onClick={handleSaveClick}
             className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
@@ -322,6 +536,15 @@ export default function Dashboard() {
             </svg>
             <span>저장</span>
           </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
+          >
+            <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>CSV</span>
+          </button>
           <Link
             to="/compare"
             className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl text-xs font-medium text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
@@ -329,7 +552,7 @@ export default function Dashboard() {
             <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            <span>비교 ({savedScenarios.length})</span>
+            <span>비교</span>
           </Link>
           <Link
             to="/config"
@@ -340,7 +563,7 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
-            <span>변수 조정</span>
+            <span>변수</span>
           </Link>
         </div>
 
@@ -354,6 +577,15 @@ export default function Dashboard() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
             </svg>
             저장
+          </button>
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-5 py-3 rounded-xl font-medium text-sm text-dark-500 hover:text-dark-700 hover:bg-white/50 transition-all duration-300"
+          >
+            <svg className="w-4 h-4 text-dark-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            CSV 내보내기
           </button>
           <Link
             to="/compare"
