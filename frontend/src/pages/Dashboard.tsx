@@ -364,6 +364,9 @@ export default function Dashboard() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // currentResult를 직접 사용 (로컬 state 제거)
+  const result = currentResult;
+
   // CSV 내보내기 핸들러
   const handleExportCSV = useCallback(() => {
     if (!currentInput || !result) return;
@@ -388,9 +391,6 @@ export default function Dashboard() {
     setShowLoginModal(false);
     navigate('/login', { state: { from: '/dashboard' } });
   };
-
-  // currentResult를 직접 사용 (로컬 state 제거)
-  const result = currentResult;
 
   // AI 설명을 위한 컨텍스트 생성
   const analysisContext = useMemo<SimulationContext | null>(() => {
