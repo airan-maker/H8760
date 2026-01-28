@@ -40,6 +40,30 @@ class TaxConfig:
 
 
 @dataclass
+class IncentivesConfig:
+    """인센티브 설정 (Bankability 3순위)"""
+
+    # 세액공제
+    itc_enabled: bool = False  # 투자세액공제(ITC) 활성화
+    itc_rate: float = 10.0  # 투자세액공제율 (% of CAPEX)
+    ptc_enabled: bool = False  # 생산세액공제(PTC) 활성화
+    ptc_amount: float = 700.0  # 생산세액공제액 (원/kg H2)
+    ptc_duration: int = 10  # 생산세액공제 적용기간 (년)
+
+    # 보조금
+    capex_subsidy: float = 0.0  # 설비투자 보조금 (원)
+    capex_subsidy_rate: float = 0.0  # 설비투자 보조금율 (% of CAPEX)
+    operating_subsidy: float = 0.0  # 운영 보조금 (원/kg H2)
+    operating_subsidy_duration: int = 5  # 운영 보조금 적용기간 (년)
+
+    # 기타 인센티브
+    carbon_credit_enabled: bool = False  # 탄소배출권 수익 활성화
+    carbon_credit_price: float = 1000.0  # 탄소배출권 가격 (원/kg H2)
+    clean_h2_certification_enabled: bool = False  # 청정수소 인증 활성화
+    clean_h2_premium: float = 500.0  # 청정수소 인증 프리미엄 (원/kg H2)
+
+
+@dataclass
 class FinancialConfig:
     """재무 분석 설정"""
 
@@ -61,6 +85,8 @@ class FinancialConfig:
     repayment_method: str = "equal_payment"  # 상환방식: equal_payment(원리금균등), equal_principal(원금균등)
     working_capital_months: int = 2  # 운전자본 개월수
     include_idc: bool = True  # 건설기간 이자(IDC) 포함 여부
+    # 3순위: 인센티브
+    incentives_config: Optional[IncentivesConfig] = None  # 인센티브 설정
 
 
 @dataclass
@@ -426,9 +452,17 @@ def calculate_depreciation(
     project_lifetime: int,
 ) -> List[float]:
     """
-    감가상각비 계산 (정액법)
+    감가상각비 계산 (정액법 또는 정률법)
 
     전해조/설비와 건물을 분리하여 각각의 내용연수에 따라 계산
+
+    정액법 (straight_line):
+        연간 감가상각비 = (취득가액 - 잔존가치) / 내용연수
+
+    정률법 (declining_balance):
+        연간 감가상각비 = 장부가액 × 상각률
+        상각률 = 1 - (잔존가치/취득가액)^(1/내용연수)
+        한국 세법: 정률법 상각률 = 1 - (0.05)^(1/내용연수) (잔존가치 5% 가정)
 
     Args:
         capex: 총 CAPEX
@@ -450,20 +484,59 @@ def calculate_depreciation(
     building_depreciable = building_capex - building_salvage
     equipment_depreciable = equipment_capex - equipment_salvage
 
+    is_declining = tax_config.depreciation_method == "declining_balance"
+
     depreciation = []
 
-    for year in range(1, project_lifetime + 1):
-        year_depreciation = 0.0
+    if is_declining:
+        # 정률법: 장부가액에 일정 비율 적용 (감소하는 장부가액)
+        # 한국 세법 정률법 상각률 = 1 - (잔존가치율)^(1/내용연수)
+        salvage_rate = tax_config.salvage_value_rate / 100
+        if salvage_rate <= 0:
+            salvage_rate = 0.05  # 최소 5% 잔존가치 가정
 
-        # 건물 감가상각 (정액법)
-        if year <= tax_config.building_useful_life:
-            year_depreciation += building_depreciable / tax_config.building_useful_life
+        # 정률법 상각률 계산
+        building_rate = 1 - (salvage_rate ** (1 / tax_config.building_useful_life)) if tax_config.building_useful_life > 0 else 0
+        equipment_rate = 1 - (salvage_rate ** (1 / tax_config.electrolyzer_useful_life)) if tax_config.electrolyzer_useful_life > 0 else 0
 
-        # 전해조/설비 감가상각 (정액법)
-        if year <= tax_config.electrolyzer_useful_life:
-            year_depreciation += equipment_depreciable / tax_config.electrolyzer_useful_life
+        # 장부가액 추적
+        building_book_value = building_capex
+        equipment_book_value = equipment_capex
 
-        depreciation.append(year_depreciation)
+        for year in range(1, project_lifetime + 1):
+            year_depreciation = 0.0
+
+            # 건물 감가상각 (정률법)
+            if year <= tax_config.building_useful_life and building_book_value > building_salvage:
+                building_dep = building_book_value * building_rate
+                # 잔존가치 이하로 감가상각하지 않음
+                building_dep = min(building_dep, building_book_value - building_salvage)
+                year_depreciation += building_dep
+                building_book_value -= building_dep
+
+            # 전해조/설비 감가상각 (정률법)
+            if year <= tax_config.electrolyzer_useful_life and equipment_book_value > equipment_salvage:
+                equipment_dep = equipment_book_value * equipment_rate
+                # 잔존가치 이하로 감가상각하지 않음
+                equipment_dep = min(equipment_dep, equipment_book_value - equipment_salvage)
+                year_depreciation += equipment_dep
+                equipment_book_value -= equipment_dep
+
+            depreciation.append(year_depreciation)
+    else:
+        # 정액법: 매년 동일한 금액 감가상각
+        for year in range(1, project_lifetime + 1):
+            year_depreciation = 0.0
+
+            # 건물 감가상각 (정액법)
+            if year <= tax_config.building_useful_life:
+                year_depreciation += building_depreciable / tax_config.building_useful_life
+
+            # 전해조/설비 감가상각 (정액법)
+            if year <= tax_config.electrolyzer_useful_life:
+                year_depreciation += equipment_depreciable / tax_config.electrolyzer_useful_life
+
+            depreciation.append(year_depreciation)
 
     return depreciation
 
@@ -471,6 +544,7 @@ def calculate_depreciation(
 def calculate_corporate_tax(
     taxable_income: float,
     tax_config: TaxConfig,
+    use_progressive: bool = True,
 ) -> float:
     """
     법인세 계산 (한국 누진세율 적용)
@@ -481,22 +555,52 @@ def calculate_corporate_tax(
     - 200억원 초과 ~ 3000억원: 22%
     - 3000억원 초과: 25%
 
+    지방소득세: 법인세의 10% (별도 부과)
+
     Args:
         taxable_income: 과세소득 (원)
         tax_config: 세금 설정
+        use_progressive: 누진세율 사용 여부 (False면 설정된 단일 세율 사용)
 
     Returns:
-        float: 법인세액 (원)
+        float: 법인세액 + 지방소득세 (원)
     """
     if taxable_income <= 0:
         return 0.0
 
-    # 단순화된 계산: 설정된 세율 사용
-    # 실제로는 누진세율을 적용해야 하지만, 대규모 프로젝트는 보통 최고세율 적용
-    total_tax_rate = tax_config.corporate_tax_rate + tax_config.local_tax_rate
-    corporate_tax = taxable_income * (total_tax_rate / 100)
+    if not use_progressive:
+        # 단순화된 계산: 설정된 단일 세율 사용
+        total_tax_rate = tax_config.corporate_tax_rate + tax_config.local_tax_rate
+        return taxable_income * (total_tax_rate / 100)
 
-    return corporate_tax
+    # 한국 법인세 누진세율 구간 (2024년 기준)
+    # 구간: (상한, 세율%)
+    BRACKETS = [
+        (200_000_000, 10),          # 2억원 이하: 10%
+        (20_000_000_000, 20),       # 2억원 초과 ~ 200억원: 20%
+        (300_000_000_000, 22),      # 200억원 초과 ~ 3000억원: 22%
+        (float('inf'), 25),         # 3000억원 초과: 25%
+    ]
+
+    corporate_tax = 0.0
+    remaining_income = taxable_income
+    prev_limit = 0
+
+    for limit, rate in BRACKETS:
+        if remaining_income <= 0:
+            break
+
+        # 현재 구간에서 과세할 금액
+        bracket_amount = min(remaining_income, limit - prev_limit)
+        corporate_tax += bracket_amount * (rate / 100)
+
+        remaining_income -= bracket_amount
+        prev_limit = limit
+
+    # 지방소득세 (법인세의 10%)
+    local_tax = corporate_tax * 0.10
+
+    return corporate_tax + local_tax
 
 
 def calculate_equity_cashflows(
@@ -734,9 +838,16 @@ def run_financial_analysis(
     # 세금 설정 (기본값 사용)
     tax_config = config.tax_config if config.tax_config else TaxConfig()
 
-    # CAPEX 분할 및 IDC 계산 (2순위)
+    # 인센티브 설정 (3순위)
+    incentives = config.incentives_config if config.incentives_config else IncentivesConfig()
+
+    # CAPEX 보조금 계산 (3순위)
+    capex_subsidy_total = incentives.capex_subsidy + config.capex * (incentives.capex_subsidy_rate / 100)
+    net_capex = config.capex - capex_subsidy_total  # 보조금 차감 후 CAPEX
+
+    # CAPEX 분할 및 IDC 계산 (2순위) - 보조금 차감 후 CAPEX 기준
     yearly_capex, idc_amount, total_capex_with_idc = calculate_capex_schedule_with_idc(
-        capex=config.capex,
+        capex=net_capex,  # 보조금 차감 후 CAPEX 사용
         construction_period=config.construction_period,
         capex_schedule=config.capex_schedule,
         debt_ratio=config.debt_ratio,
@@ -744,8 +855,11 @@ def run_financial_analysis(
         include_idc=config.include_idc,
     )
 
-    # 실제 투자비 (IDC 포함)
+    # 실제 투자비 (IDC 포함, 보조금 차감 후)
     effective_capex = total_capex_with_idc
+
+    # 투자세액공제 (ITC) 계산 - 원래 CAPEX 기준
+    itc_amount = config.capex * (incentives.itc_rate / 100) if incentives.itc_enabled else 0
 
     # 부채 계산 (IDC 포함 CAPEX 기준)
     debt_amount = effective_capex * (config.debt_ratio / 100)
@@ -817,6 +931,27 @@ def run_financial_analysis(
             if idx < len(yearly_electricity_costs)
             else 0
         )
+        h2_production = yearly_h2_production[idx] if idx < len(yearly_h2_production) else 0
+
+        # === 3순위: 생산 기반 인센티브 계산 ===
+        # 운영 보조금 (적용기간 내)
+        operating_subsidy = 0.0
+        if incentives.operating_subsidy > 0 and year <= incentives.operating_subsidy_duration:
+            operating_subsidy = h2_production * incentives.operating_subsidy
+
+        # 탄소배출권 수익
+        carbon_credit_revenue = 0.0
+        if incentives.carbon_credit_enabled:
+            carbon_credit_revenue = h2_production * incentives.carbon_credit_price
+
+        # 청정수소 프리미엄
+        clean_h2_premium_revenue = 0.0
+        if incentives.clean_h2_certification_enabled:
+            clean_h2_premium_revenue = h2_production * incentives.clean_h2_premium
+
+        # 인센티브로 인한 추가 수익
+        incentive_revenue = operating_subsidy + carbon_credit_revenue + clean_h2_premium_revenue
+        total_revenue = revenue + incentive_revenue
 
         # 스택 교체 비용
         stack_cost = (
@@ -833,9 +968,9 @@ def run_financial_analysis(
         interest = interest_payments[idx] if idx < len(interest_payments) else 0
         principal = principal_payments[idx] if idx < len(principal_payments) else 0
 
-        # EBITDA 계산
+        # EBITDA 계산 (인센티브 수익 포함)
         total_opex = annual_opex + elec_cost + stack_cost
-        ebitda = revenue - total_opex
+        ebitda = total_revenue - total_opex
 
         # EBIT 계산 (영업이익)
         ebit = ebitda - depreciation
@@ -843,8 +978,18 @@ def run_financial_analysis(
         # 세전 이익 (EBT)
         ebt = ebit - interest
 
-        # 법인세 계산
-        tax = calculate_corporate_tax(ebt, tax_config) if ebt > 0 else 0
+        # === 3순위: 세액공제 계산 ===
+        # 생산세액공제 (PTC) - 적용기간 내
+        ptc_credit = 0.0
+        if incentives.ptc_enabled and year <= incentives.ptc_duration:
+            ptc_credit = h2_production * incentives.ptc_amount
+
+        # 투자세액공제 (ITC) - 1년차에만 적용
+        itc_credit = itc_amount if year == 1 else 0
+
+        # 법인세 계산 (세액공제 적용)
+        gross_tax = calculate_corporate_tax(ebt, tax_config) if ebt > 0 else 0
+        tax = max(0, gross_tax - ptc_credit - itc_credit)  # 세액공제 적용 후 세금 (음수 방지)
 
         # 순이익
         net_income = ebt - tax
@@ -876,7 +1021,7 @@ def run_financial_analysis(
         yearly_cashflows.append(
             YearlyCashflow(
                 year=year,
-                revenue=revenue,
+                revenue=total_revenue,  # 인센티브 수익 포함
                 opex=total_opex,
                 stack_replacement=stack_cost,
                 debt_service=ds,

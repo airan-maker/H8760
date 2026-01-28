@@ -29,7 +29,7 @@ class MonteCarloResult:
     revenue_distribution: np.ndarray
     h2_production_distribution: np.ndarray
 
-    # 백분위수 값
+    # 백분위수 값 (세전)
     npv_p50: float
     npv_p90: float
     npv_p99: float
@@ -40,6 +40,18 @@ class MonteCarloResult:
     # VaR
     var_95: float
     var_99: float
+
+    # 세후 NPV 분포 (Bankability 3순위)
+    npv_after_tax_distribution: np.ndarray = None
+    npv_after_tax_p50: float = 0.0
+    npv_after_tax_p90: float = 0.0
+    npv_after_tax_p99: float = 0.0
+
+    # Equity IRR 분포 (Bankability 3순위)
+    equity_irr_distribution: np.ndarray = None
+    equity_irr_p50: float = 0.0
+    equity_irr_p90: float = 0.0
+    equity_irr_p99: float = 0.0
 
 
 def run_monte_carlo(
@@ -53,6 +65,12 @@ def run_monte_carlo(
     project_lifetime: int,
     weather_variability: bool = True,
     price_volatility: bool = True,
+    # Bankability 3순위: 세후 계산용 파라미터
+    debt_ratio: float = 70.0,
+    interest_rate: float = 5.0,
+    loan_tenor: int = 15,
+    tax_rate: float = 24.2,  # 법인세 + 지방소득세 (기본값)
+    depreciation_years: int = 10,
 ) -> MonteCarloResult:
     """
     몬테카를로 시뮬레이션 실행
@@ -68,6 +86,11 @@ def run_monte_carlo(
         project_lifetime: 프로젝트 기간
         weather_variability: 기상 변동성 반영 여부
         price_volatility: 가격 변동성 반영 여부
+        debt_ratio: 부채 비율 (%)
+        interest_rate: 대출 이자율 (%)
+        loan_tenor: 대출 기간 (년)
+        tax_rate: 법인세율 + 지방소득세율 (%)
+        depreciation_years: 감가상각 내용연수 (년)
 
     Returns:
         MonteCarloResult: 시뮬레이션 결과
@@ -76,6 +99,24 @@ def run_monte_carlo(
     irr_results = []
     revenue_results = []
     h2_production_results = []
+
+    # Bankability 3순위: 세후 결과
+    npv_after_tax_results = []
+    equity_irr_results = []
+
+    # 부채/자기자본 계산
+    debt_amount = capex * (debt_ratio / 100)
+    equity_amount = capex - debt_amount
+
+    # 연간 원리금 상환액 (원리금균등)
+    if debt_amount > 0 and interest_rate > 0 and loan_tenor > 0:
+        r = interest_rate / 100
+        annual_debt_service = debt_amount * (r * (1 + r) ** loan_tenor) / ((1 + r) ** loan_tenor - 1)
+    else:
+        annual_debt_service = 0
+
+    # 연간 감가상각비 (정액법, 잔존가치 5% 가정)
+    annual_depreciation = (capex * 0.95) / depreciation_years if depreciation_years > 0 else 0
 
     # 시드 설정 - 재현성을 위해 시뮬레이션 시작 시 한 번만 설정
     # 각 반복은 다른 난수 사용
@@ -124,8 +165,12 @@ def run_monte_carlo(
 
         # 다년간 현금흐름 계산
         cashflows = [-capex]
+        cashflows_after_tax = [-equity_amount]  # 자기자본 기준
         total_revenue = 0
         total_h2 = 0
+
+        # 대출 잔액 추적 (이자 계산용)
+        remaining_debt = debt_amount
 
         for year in range(1, project_lifetime + 1):
             result = calculate_8760(
@@ -136,19 +181,62 @@ def run_monte_carlo(
             )
 
             year_revenue = np.sum(result.hourly_revenue) - np.sum(result.hourly_cost)
+
+            # 세전 순현금흐름 (기존)
             net_cashflow = year_revenue - opex_annual
             cashflows.append(net_cashflow)
+
+            # === Bankability 3순위: 세후 현금흐름 계산 ===
+            # EBITDA
+            ebitda = year_revenue - opex_annual
+
+            # 감가상각비 (내용연수 내에서만)
+            depreciation = annual_depreciation if year <= depreciation_years else 0
+
+            # EBIT (영업이익)
+            ebit = ebitda - depreciation
+
+            # 이자비용 (잔액 기준)
+            if year <= loan_tenor and remaining_debt > 0:
+                interest_expense = remaining_debt * (interest_rate / 100)
+                # 원금 상환액
+                principal_payment = annual_debt_service - interest_expense if annual_debt_service > interest_expense else 0
+                remaining_debt = max(0, remaining_debt - principal_payment)
+            else:
+                interest_expense = 0
+                principal_payment = 0
+
+            # 세전 이익 (EBT)
+            ebt = ebit - interest_expense
+
+            # 법인세 (양수일 때만)
+            tax = ebt * (tax_rate / 100) if ebt > 0 else 0
+
+            # 순이익
+            net_income = ebt - tax
+
+            # 세후 자기자본 현금흐름 = 순이익 + 감가상각 - 원금상환
+            equity_cashflow = net_income + depreciation - principal_payment
+            cashflows_after_tax.append(equity_cashflow)
 
             total_revenue += year_revenue
             total_h2 += result.total_h2_production
 
-        # NPV 계산
+        # NPV 계산 (세전)
         npv = calculate_npv(cashflows, discount_rate / 100)
         npv_results.append(npv)
 
-        # IRR 계산
+        # NPV 계산 (세후)
+        npv_after_tax = calculate_npv(cashflows_after_tax, discount_rate / 100)
+        npv_after_tax_results.append(npv_after_tax)
+
+        # IRR 계산 (세전 - Project IRR)
         irr = calculate_irr(cashflows)
         irr_results.append(irr if irr is not None else 0)
+
+        # Equity IRR 계산 (세후 자기자본 기준)
+        equity_irr = calculate_irr(cashflows_after_tax)
+        equity_irr_results.append(equity_irr if equity_irr is not None else 0)
 
         revenue_results.append(total_revenue / project_lifetime)
         h2_production_results.append(total_h2 / project_lifetime / 1000)  # 톤 단위
@@ -158,6 +246,10 @@ def run_monte_carlo(
     irr_dist = np.array(irr_results)
     revenue_dist = np.array(revenue_results)
     h2_dist = np.array(h2_production_results)
+
+    # Bankability 3순위: 세후 결과
+    npv_after_tax_dist = np.array(npv_after_tax_results)
+    equity_irr_dist = np.array(equity_irr_results)
 
     return MonteCarloResult(
         npv_distribution=npv_dist,
@@ -177,6 +269,16 @@ def run_monte_carlo(
         # VaR (Value at Risk) - 손실 리스크
         var_95=float(np.percentile(npv_dist, 5)),    # 95% VaR
         var_99=float(np.percentile(npv_dist, 1)),    # 99% VaR
+        # Bankability 3순위: 세후 NPV 분포
+        npv_after_tax_distribution=npv_after_tax_dist,
+        npv_after_tax_p50=float(np.percentile(npv_after_tax_dist, 50)),
+        npv_after_tax_p90=float(np.percentile(npv_after_tax_dist, 10)),
+        npv_after_tax_p99=float(np.percentile(npv_after_tax_dist, 1)),
+        # Bankability 3순위: Equity IRR 분포
+        equity_irr_distribution=equity_irr_dist,
+        equity_irr_p50=float(np.percentile(equity_irr_dist, 50)),
+        equity_irr_p90=float(np.percentile(equity_irr_dist, 10)),
+        equity_irr_p99=float(np.percentile(equity_irr_dist, 1)),
     )
 
 

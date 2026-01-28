@@ -163,6 +163,55 @@ class TaxConfig(BaseModel):
     )
 
 
+class IncentivesConfig(BaseModel):
+    """인센티브 설정 (Bankability 3순위)"""
+
+    # 세액공제
+    itc_enabled: bool = Field(
+        default=False, description="투자세액공제(ITC) 활성화"
+    )
+    itc_rate: float = Field(
+        default=10.0, ge=0, le=50, description="투자세액공제율 (% of CAPEX)"
+    )
+    ptc_enabled: bool = Field(
+        default=False, description="생산세액공제(PTC) 활성화"
+    )
+    ptc_amount: float = Field(
+        default=700.0, ge=0, le=5000, description="생산세액공제액 (원/kg H2)"
+    )
+    ptc_duration: int = Field(
+        default=10, ge=0, le=20, description="생산세액공제 적용기간 (년)"
+    )
+
+    # 보조금
+    capex_subsidy: float = Field(
+        default=0.0, ge=0, description="설비투자 보조금 (원)"
+    )
+    capex_subsidy_rate: float = Field(
+        default=0.0, ge=0, le=50, description="설비투자 보조금율 (% of CAPEX)"
+    )
+    operating_subsidy: float = Field(
+        default=0.0, ge=0, le=5000, description="운영 보조금 (원/kg H2)"
+    )
+    operating_subsidy_duration: int = Field(
+        default=5, ge=0, le=20, description="운영 보조금 적용기간 (년)"
+    )
+
+    # 기타 인센티브
+    carbon_credit_enabled: bool = Field(
+        default=False, description="탄소배출권 수익 활성화"
+    )
+    carbon_credit_price: float = Field(
+        default=1000.0, ge=0, le=10000, description="탄소배출권 가격 (원/kg H2)"
+    )
+    clean_h2_certification_enabled: bool = Field(
+        default=False, description="청정수소 인증 활성화"
+    )
+    clean_h2_premium: float = Field(
+        default=500.0, ge=0, le=5000, description="청정수소 인증 프리미엄 (원/kg H2)"
+    )
+
+
 class RiskWeightsConfig(BaseModel):
     """리스크 가중치 설정"""
 
@@ -199,6 +248,7 @@ class SimulationInput(BaseModel):
     market: MarketConfig = Field(default_factory=MarketConfig)
     financial: FinancialConfig = Field(default_factory=FinancialConfig)
     tax: TaxConfig = Field(default_factory=TaxConfig)
+    incentives: IncentivesConfig = Field(default_factory=IncentivesConfig)
     risk_weights: RiskWeightsConfig = Field(default_factory=RiskWeightsConfig)
     monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig)
     renewable: RenewableConfig = Field(default_factory=RenewableConfig)

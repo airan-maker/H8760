@@ -37,7 +37,7 @@ from app.schemas.result import (
 )
 from app.engine.energy_8760 import Energy8760Config, calculate_8760, aggregate_yearly_results
 from app.engine.monte_carlo import MonteCarloConfig, run_monte_carlo, create_histogram
-from app.engine.financial import FinancialConfig, TaxConfig, run_financial_analysis
+from app.engine.financial import FinancialConfig, TaxConfig, IncentivesConfig, run_financial_analysis
 from app.engine.sensitivity import (
     generate_default_sensitivity_variables,
     run_sensitivity_analysis,
@@ -160,6 +160,24 @@ def run_full_simulation(
         salvage_value_rate=tax.salvage_value_rate,
     )
 
+    # 인센티브 설정 (3순위)
+    incentives = input_config.incentives
+    incentives_config = IncentivesConfig(
+        itc_enabled=incentives.itc_enabled,
+        itc_rate=incentives.itc_rate,
+        ptc_enabled=incentives.ptc_enabled,
+        ptc_amount=incentives.ptc_amount,
+        ptc_duration=incentives.ptc_duration,
+        capex_subsidy=incentives.capex_subsidy,
+        capex_subsidy_rate=incentives.capex_subsidy_rate,
+        operating_subsidy=incentives.operating_subsidy,
+        operating_subsidy_duration=incentives.operating_subsidy_duration,
+        carbon_credit_enabled=incentives.carbon_credit_enabled,
+        carbon_credit_price=incentives.carbon_credit_price,
+        clean_h2_certification_enabled=incentives.clean_h2_certification_enabled,
+        clean_h2_premium=incentives.clean_h2_premium,
+    )
+
     financial_config = FinancialConfig(
         capex=cost.capex,
         opex_ratio=cost.opex_ratio,
@@ -178,6 +196,8 @@ def run_full_simulation(
         repayment_method=financial.repayment_method,
         working_capital_months=financial.working_capital_months,
         include_idc=financial.include_idc,
+        # 3순위: 인센티브
+        incentives_config=incentives_config,
     )
 
     # 재무 분석 실행
@@ -228,12 +248,19 @@ def run_full_simulation(
         project_lifetime=financial.project_lifetime,
         weather_variability=risk.weather_variability,
         price_volatility=risk.price_volatility,
+        # Bankability 3순위: 세후 계산용 파라미터
+        debt_ratio=financial.debt_ratio,
+        interest_rate=financial.interest_rate,
+        loan_tenor=financial.loan_tenor,
+        tax_rate=tax.corporate_tax_rate + tax.local_tax_rate,
+        depreciation_years=tax.electrolyzer_useful_life,
     )
     mc_elapsed = time.time() - mc_start
     log_progress("  └ 완료", f"{mc_elapsed:.2f}초 소요")
-    log_progress("  └ NPV P50", f"{mc_result.npv_p50/1e8:.1f}억원")
-    log_progress("  └ NPV P90", f"{mc_result.npv_p90/1e8:.1f}억원")
-    log_progress("  └ IRR P50", f"{mc_result.irr_p50:.2f}%")
+    log_progress("  └ NPV P50 (세전)", f"{mc_result.npv_p50/1e8:.1f}억원")
+    log_progress("  └ NPV P50 (세후)", f"{mc_result.npv_after_tax_p50/1e8:.1f}억원")
+    log_progress("  └ IRR P50 (Project)", f"{mc_result.irr_p50:.2f}%")
+    log_progress("  └ IRR P50 (Equity)", f"{mc_result.equity_irr_p50:.2f}%")
     log_progress("  └ VaR 95%", f"{mc_result.var_95/1e8:.1f}억원")
 
     # 민감도 분석
@@ -358,16 +385,16 @@ def run_full_simulation(
                 p99=float(np.percentile(mc_result.h2_production_distribution, 1)),
             ),
             lcoh=fin_result.lcoh,
-            # Bankability 추가 지표
+            # Bankability 추가 지표 (3순위: 몬테카를로 세후 분포 적용)
             npv_after_tax=PercentileValue(
-                p50=fin_result.npv_after_tax,  # TODO: 몬테카를로에서 세후 NPV 분포 계산 필요
-                p90=fin_result.npv_after_tax * 0.8,  # 임시 추정값
-                p99=fin_result.npv_after_tax * 0.6,  # 임시 추정값
+                p50=mc_result.npv_after_tax_p50,
+                p90=mc_result.npv_after_tax_p90,
+                p99=mc_result.npv_after_tax_p99,
             ),
             equity_irr=PercentileValue(
-                p50=fin_result.equity_irr,
-                p90=fin_result.equity_irr * 0.85,  # 임시 추정값
-                p99=fin_result.equity_irr * 0.7,   # 임시 추정값
+                p50=mc_result.equity_irr_p50,
+                p90=mc_result.equity_irr_p90,
+                p99=mc_result.equity_irr_p99,
             ),
             coverage_ratios=LLCRMetrics(
                 llcr=fin_result.llcr,

@@ -138,6 +138,22 @@ export const simulationApi = {
           building_ratio: input.tax.buildingRatio,
           salvage_value_rate: input.tax.salvageValueRate,
         },
+        // 3순위: 인센티브
+        incentives: {
+          itc_enabled: input.incentives.itcEnabled,
+          itc_rate: input.incentives.itcRate,
+          ptc_enabled: input.incentives.ptcEnabled,
+          ptc_amount: input.incentives.ptcAmount,
+          ptc_duration: input.incentives.ptcDuration,
+          capex_subsidy: input.incentives.capexSubsidy,
+          capex_subsidy_rate: input.incentives.capexSubsidyRate,
+          operating_subsidy: input.incentives.operatingSubsidy,
+          operating_subsidy_duration: input.incentives.operatingSubsidyDuration,
+          carbon_credit_enabled: input.incentives.carbonCreditEnabled,
+          carbon_credit_price: input.incentives.carbonCreditPrice,
+          clean_h2_certification_enabled: input.incentives.cleanH2CertificationEnabled,
+          clean_h2_premium: input.incentives.cleanH2Premium,
+        },
         risk_weights: {
           weather_variability: input.riskWeights.weatherVariability,
           price_volatility: input.riskWeights.priceVolatility,
