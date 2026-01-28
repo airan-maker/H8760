@@ -35,6 +35,20 @@ export interface FinancialConfig {
   debtRatio: number; // %
   interestRate: number; // %
   loanTenor: number; // years
+  // Bankability 추가 필드
+  constructionPeriod: number; // years - 건설 기간
+  gracePeriod: number; // years - 대출 거치 기간
+}
+
+// 세금 및 감가상각 설정 (Bankability 평가 필수 요소)
+export interface TaxConfig {
+  corporateTaxRate: number; // % - 법인세율
+  localTaxRate: number; // % - 지방소득세율
+  depreciationMethod: 'straight_line' | 'declining_balance'; // 감가상각 방법
+  electrolyzerUsefulLife: number; // years - 전해조 내용연수
+  buildingUsefulLife: number; // years - 건물 내용연수
+  buildingRatio: number; // % - 건물 비율 (CAPEX 대비)
+  salvageValueRate: number; // % - 잔존가치율
 }
 
 // 인센티브 설정 (세액공제, 보조금 등)
@@ -79,6 +93,7 @@ export interface SimulationInput {
   cost: CostConfig;
   market: MarketConfig;
   financial: FinancialConfig;
+  tax: TaxConfig;
   incentives: IncentivesConfig;
   riskWeights: RiskWeightsConfig;
   monteCarlo: MonteCarloConfig;
@@ -91,15 +106,26 @@ export interface PercentileValue {
   p99: number;
 }
 
+// LLCR/PLCR 지표 (Bankability 핵심 지표)
+export interface LLCRMetrics {
+  llcr: number; // Loan Life Coverage Ratio
+  plcr: number; // Project Life Coverage Ratio
+}
+
 // KPI
 export interface KPIs {
-  npv: PercentileValue;
-  irr: PercentileValue;
+  // 기존 지표
+  npv: PercentileValue; // 세전 NPV
+  irr: PercentileValue; // Project IRR
   dscr: { min: number; avg: number };
   paybackPeriod: number;
   var95: number;
   annualH2Production: PercentileValue;
   lcoh: number;
+  // Bankability 추가 지표
+  npvAfterTax: PercentileValue; // 세후 NPV
+  equityIrr: PercentileValue; // Equity IRR
+  coverageRatios: LLCRMetrics; // LLCR/PLCR
 }
 
 // 히스토그램 빈
@@ -132,14 +158,29 @@ export interface RiskWaterfallItem {
   impact: number;
 }
 
-// 연간 현금흐름
+// 연간 현금흐름 (프로젝트 파이낸스 표준 형식)
 export interface YearlyCashflow {
   year: number;
+  // 수익
   revenue: number;
+  // 비용
   opex: number;
+  depreciation: number; // 감가상각비
+  // EBITDA / EBIT
+  ebitda: number;
+  ebit: number;
+  // 세금
+  tax: number; // 법인세
+  // 부채 관련
   debtService: number;
-  netCashflow: number;
+  interestExpense: number; // 이자비용
+  principalRepayment: number; // 원금상환
+  // 현금흐름
+  netCashflow: number; // 세전
+  netCashflowAfterTax: number; // 세후
   cumulativeCashflow: number;
+  // 커버리지
+  dscr: number;
 }
 
 // 시뮬레이션 결과
@@ -215,6 +256,17 @@ export const defaultSimulationInput: SimulationInput = {
     debtRatio: 70,                   // %
     interestRate: 5,                 // %
     loanTenor: 15,                   // 년
+    constructionPeriod: 1,           // 년 (건설 기간)
+    gracePeriod: 1,                  // 년 (대출 거치 기간)
+  },
+  tax: {
+    corporateTaxRate: 22,            // % (한국 법인세 기본세율)
+    localTaxRate: 2.2,               // % (지방소득세 = 법인세의 10%)
+    depreciationMethod: 'straight_line' as const,
+    electrolyzerUsefulLife: 10,      // 년 (전해조 내용연수)
+    buildingUsefulLife: 40,          // 년 (건물 내용연수)
+    buildingRatio: 10,               // % (건물 비율)
+    salvageValueRate: 5,             // % (잔존가치율)
   },
   incentives: {
     // 세액공제 (한국 수소법 기준)

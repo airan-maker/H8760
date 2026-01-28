@@ -7,9 +7,13 @@ interface Props {
 }
 
 export default function KPICards({ kpis }: Props) {
+  // Bankability 지표가 있는지 확인 (하위 호환성)
+  const hasEquityIrr = kpis.equityIrr && kpis.equityIrr.p50 !== undefined;
+  const hasCoverageRatios = kpis.coverageRatios && kpis.coverageRatios.llcr !== undefined;
+
   const cards = [
     {
-      title: 'NPV',
+      title: 'NPV (세전)',
       value: formatCurrency(kpis.npv.p50, true),
       subValues: [
         { label: 'P90', value: formatCurrency(kpis.npv.p90, true) },
@@ -30,7 +34,7 @@ export default function KPICards({ kpis }: Props) {
       ),
     },
     {
-      title: 'IRR',
+      title: 'Project IRR',
       value: formatPercent(kpis.irr.p50, 1),
       subValues: [
         { label: 'P90', value: formatPercent(kpis.irr.p90, 1) },
@@ -50,6 +54,27 @@ export default function KPICards({ kpis }: Props) {
         </svg>
       ),
     },
+    // Equity IRR (Bankability 지표)
+    ...(hasEquityIrr ? [{
+      title: 'Equity IRR',
+      value: formatPercent(kpis.equityIrr.p50, 1),
+      subValues: [
+        { label: 'P90', value: formatPercent(kpis.equityIrr.p90, 1) },
+      ],
+      subtitle: '자기자본 수익률',
+      color: kpis.equityIrr.p50 >= 12 ? 'green' : kpis.equityIrr.p50 >= 8 ? 'yellow' : 'red',
+      trend: kpis.equityIrr.p50 >= 12 ? 'up' : 'neutral',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+          />
+        </svg>
+      ),
+    }] : []),
     {
       title: 'DSCR',
       value: `${formatNumber(kpis.dscr.min, 2)}x`,
@@ -70,6 +95,27 @@ export default function KPICards({ kpis }: Props) {
         </svg>
       ),
     },
+    // LLCR/PLCR (Bankability 지표)
+    ...(hasCoverageRatios ? [{
+      title: 'LLCR / PLCR',
+      value: `${formatNumber(kpis.coverageRatios.llcr, 2)}x`,
+      subValues: [
+        { label: 'PLCR', value: `${formatNumber(kpis.coverageRatios.plcr, 2)}x` },
+      ],
+      subtitle: '대출 커버리지',
+      color: kpis.coverageRatios.llcr >= 1.2 ? 'green' : kpis.coverageRatios.llcr >= 1.1 ? 'yellow' : 'red',
+      trend: kpis.coverageRatios.llcr >= 1.2 ? 'up' : 'neutral',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"
+          />
+        </svg>
+      ),
+    }] : []),
     {
       title: '연간 생산량',
       value: `${formatNumber(kpis.annualH2Production.p50, 0)} 톤`,
@@ -182,8 +228,11 @@ export default function KPICards({ kpis }: Props) {
     },
   };
 
+  // 카드 수에 따라 그리드 조정
+  const gridCols = cards.length <= 6 ? 'lg:grid-cols-6' : cards.length <= 8 ? 'lg:grid-cols-4' : 'lg:grid-cols-5';
+
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className={`grid grid-cols-2 md:grid-cols-3 ${gridCols} gap-4`}>
       {cards.map((card, index) => {
         const colors = colorConfig[card.color as keyof typeof colorConfig];
         return (

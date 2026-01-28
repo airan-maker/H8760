@@ -26,6 +26,7 @@ from app.schemas.result import (
     KPIs,
     PercentileValue,
     DSCRMetrics,
+    LLCRMetrics,
     HourlyData,
     Distributions,
     HistogramBin,
@@ -35,7 +36,7 @@ from app.schemas.result import (
 )
 from app.engine.energy_8760 import Energy8760Config, calculate_8760, aggregate_yearly_results
 from app.engine.monte_carlo import MonteCarloConfig, run_monte_carlo, create_histogram
-from app.engine.financial import FinancialConfig, run_financial_analysis
+from app.engine.financial import FinancialConfig, TaxConfig, run_financial_analysis
 from app.engine.sensitivity import (
     generate_default_sensitivity_variables,
     run_sensitivity_analysis,
@@ -67,6 +68,7 @@ def run_full_simulation(
     cost = input_config.cost
     market = input_config.market
     financial = input_config.financial
+    tax = input_config.tax
     risk = input_config.risk_weights
     mc = input_config.monte_carlo
     renewable = input_config.renewable
@@ -144,7 +146,19 @@ def run_full_simulation(
 
     # 재무 분석 설정
     print("-"*60, flush=True)
-    log_progress("STEP 4/6", "재무 분석 실행")
+    log_progress("STEP 4/6", "재무 분석 실행 (Bankability 평가 포함)")
+
+    # 세금 설정
+    tax_config = TaxConfig(
+        corporate_tax_rate=tax.corporate_tax_rate,
+        local_tax_rate=tax.local_tax_rate,
+        depreciation_method=tax.depreciation_method,
+        electrolyzer_useful_life=tax.electrolyzer_useful_life,
+        building_useful_life=tax.building_useful_life,
+        building_ratio=tax.building_ratio,
+        salvage_value_rate=tax.salvage_value_rate,
+    )
+
     financial_config = FinancialConfig(
         capex=cost.capex,
         opex_ratio=cost.opex_ratio,
@@ -155,6 +169,9 @@ def run_full_simulation(
         debt_ratio=financial.debt_ratio,
         interest_rate=financial.interest_rate,
         loan_tenor=financial.loan_tenor,
+        construction_period=financial.construction_period,
+        grace_period=financial.grace_period,
+        tax_config=tax_config,
     )
 
     # 재무 분석 실행
@@ -164,9 +181,14 @@ def run_full_simulation(
         yearly_electricity_costs=yearly_elec_costs,
         yearly_h2_production=yearly_h2_prod,
     )
-    log_progress("  └ NPV", f"{fin_result.npv/1e8:.1f}억원")
-    log_progress("  └ IRR", f"{fin_result.irr:.2f}%")
+    log_progress("  └ NPV (세전)", f"{fin_result.npv/1e8:.1f}억원")
+    log_progress("  └ NPV (세후)", f"{fin_result.npv_after_tax/1e8:.1f}억원")
+    log_progress("  └ Project IRR", f"{fin_result.irr:.2f}%")
+    log_progress("  └ Equity IRR", f"{fin_result.equity_irr:.2f}%")
     log_progress("  └ LCOH", f"{fin_result.lcoh:,.0f}원/kg")
+    log_progress("  └ DSCR (min)", f"{fin_result.dscr_min:.2f}")
+    log_progress("  └ LLCR", f"{fin_result.llcr:.2f}")
+    log_progress("  └ PLCR", f"{fin_result.plcr:.2f}")
     log_progress("  └ 투자회수기간", f"{fin_result.payback_period:.1f}년")
 
     # 몬테카를로 시뮬레이션
@@ -309,6 +331,21 @@ def run_full_simulation(
                 p99=float(np.percentile(mc_result.h2_production_distribution, 1)),
             ),
             lcoh=fin_result.lcoh,
+            # Bankability 추가 지표
+            npv_after_tax=PercentileValue(
+                p50=fin_result.npv_after_tax,  # TODO: 몬테카를로에서 세후 NPV 분포 계산 필요
+                p90=fin_result.npv_after_tax * 0.8,  # 임시 추정값
+                p99=fin_result.npv_after_tax * 0.6,  # 임시 추정값
+            ),
+            equity_irr=PercentileValue(
+                p50=fin_result.equity_irr,
+                p90=fin_result.equity_irr * 0.85,  # 임시 추정값
+                p99=fin_result.equity_irr * 0.7,   # 임시 추정값
+            ),
+            coverage_ratios=LLCRMetrics(
+                llcr=fin_result.llcr,
+                plcr=fin_result.plcr,
+            ),
         ),
         hourly_data=HourlyData(
             production=base_result.h2_production.tolist(),
@@ -340,9 +377,17 @@ def run_full_simulation(
                 year=cf.year,
                 revenue=cf.revenue,
                 opex=cf.opex,
+                depreciation=cf.depreciation,
+                ebitda=cf.ebitda,
+                ebit=cf.ebit,
+                tax=cf.tax,
                 debt_service=cf.debt_service,
+                interest_expense=cf.interest_expense,
+                principal_repayment=cf.principal_repayment,
                 net_cashflow=cf.net_cashflow,
+                net_cashflow_after_tax=cf.net_cashflow_after_tax,
                 cumulative_cashflow=cf.cumulative_cashflow,
+                dscr=cf.dscr,
             )
             for cf in fin_result.yearly_cashflows
         ],

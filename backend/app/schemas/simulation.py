@@ -111,6 +111,39 @@ class FinancialConfig(BaseModel):
     loan_tenor: int = Field(
         default=15, ge=1, le=30, description="대출 기간 (년)"
     )
+    # 건설기간 및 거치기간 (Bankability 평가용)
+    construction_period: int = Field(
+        default=1, ge=0, le=5, description="건설 기간 (년) - CAPEX 분할 투입"
+    )
+    grace_period: int = Field(
+        default=1, ge=0, le=5, description="대출 거치 기간 (년) - 건설기간 포함"
+    )
+
+
+class TaxConfig(BaseModel):
+    """세금 및 감가상각 설정 (Bankability 평가 필수 요소)"""
+
+    corporate_tax_rate: float = Field(
+        default=22.0, ge=0, le=50, description="법인세율 (%) - 한국: 10~25% 누진"
+    )
+    local_tax_rate: float = Field(
+        default=2.2, ge=0, le=10, description="지방소득세율 (%) - 법인세의 10%"
+    )
+    depreciation_method: Literal["straight_line", "declining_balance"] = Field(
+        default="straight_line", description="감가상각 방법 - 정액법/정률법"
+    )
+    electrolyzer_useful_life: int = Field(
+        default=10, ge=5, le=20, description="전해조 감가상각 내용연수 (년)"
+    )
+    building_useful_life: int = Field(
+        default=40, ge=20, le=50, description="건물/구축물 감가상각 내용연수 (년)"
+    )
+    building_ratio: float = Field(
+        default=10.0, ge=0, le=30, description="건물/구축물 비율 (% of CAPEX)"
+    )
+    salvage_value_rate: float = Field(
+        default=5.0, ge=0, le=20, description="잔존가치율 (% of CAPEX)"
+    )
 
 
 class RiskWeightsConfig(BaseModel):
@@ -148,6 +181,7 @@ class SimulationInput(BaseModel):
     cost: CostConfig = Field(default_factory=CostConfig)
     market: MarketConfig = Field(default_factory=MarketConfig)
     financial: FinancialConfig = Field(default_factory=FinancialConfig)
+    tax: TaxConfig = Field(default_factory=TaxConfig)
     risk_weights: RiskWeightsConfig = Field(default_factory=RiskWeightsConfig)
     monte_carlo: MonteCarloConfig = Field(default_factory=MonteCarloConfig)
     renewable: RenewableConfig = Field(default_factory=RenewableConfig)

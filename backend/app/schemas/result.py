@@ -30,16 +30,29 @@ class DSCRMetrics(CamelCaseModel):
     avg: float
 
 
+class LLCRMetrics(CamelCaseModel):
+    """LLCR/PLCR 지표 (Bankability 핵심 지표)"""
+
+    llcr: float = Field(description="Loan Life Coverage Ratio - 대출기간 내 현금흐름 PV / 대출잔액")
+    plcr: float = Field(description="Project Life Coverage Ratio - 프로젝트 전기간 현금흐름 PV / 대출잔액")
+
+
 class KPIs(CamelCaseModel):
     """핵심 성과 지표"""
 
-    npv: PercentileValue = Field(description="순현재가치 (원)")
-    irr: PercentileValue = Field(description="내부수익률 (%)")
+    # 기존 지표
+    npv: PercentileValue = Field(description="순현재가치 (원) - 세전")
+    irr: PercentileValue = Field(description="내부수익률 (%) - Project IRR")
     dscr: DSCRMetrics = Field(description="부채상환비율")
     payback_period: float = Field(description="투자회수기간 (년)")
     var_95: float = Field(description="95% VaR (원)")
     annual_h2_production: PercentileValue = Field(description="연간 수소 생산량 (톤)")
     lcoh: float = Field(description="수소 균등화 비용 (원/kg)")
+
+    # Bankability 추가 지표
+    npv_after_tax: PercentileValue = Field(description="순현재가치 (원) - 세후")
+    equity_irr: PercentileValue = Field(description="자기자본 내부수익률 (%)")
+    coverage_ratios: LLCRMetrics = Field(description="LLCR/PLCR 커버리지 비율")
 
 
 class HistogramBin(CamelCaseModel):
@@ -84,14 +97,29 @@ class RiskWaterfallItem(CamelCaseModel):
 
 
 class YearlyCashflow(CamelCaseModel):
-    """연간 현금흐름"""
+    """연간 현금흐름 (프로젝트 파이낸스 표준 형식)"""
 
     year: int
-    revenue: float
-    opex: float
-    debt_service: float
-    net_cashflow: float
-    cumulative_cashflow: float
+    # 수익
+    revenue: float = Field(description="매출액 (원)")
+    # 비용
+    opex: float = Field(description="운영비 (원)")
+    depreciation: float = Field(default=0, description="감가상각비 (원)")
+    # EBITDA / EBIT
+    ebitda: float = Field(default=0, description="EBITDA (원)")
+    ebit: float = Field(default=0, description="EBIT (원)")
+    # 세금
+    tax: float = Field(default=0, description="법인세 (원)")
+    # 부채 관련
+    debt_service: float = Field(description="원리금 상환액 (원)")
+    interest_expense: float = Field(default=0, description="이자비용 (원)")
+    principal_repayment: float = Field(default=0, description="원금상환 (원)")
+    # 현금흐름
+    net_cashflow: float = Field(description="순현금흐름 - 세전 (원)")
+    net_cashflow_after_tax: float = Field(default=0, description="순현금흐름 - 세후 (원)")
+    cumulative_cashflow: float = Field(description="누적 현금흐름 (원)")
+    # 커버리지
+    dscr: float = Field(default=0, description="해당 연도 DSCR")
 
 
 class SimulationResult(CamelCaseModel):

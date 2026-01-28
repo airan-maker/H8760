@@ -39,6 +39,17 @@ export default function FinancialConfig({ config, onChange }: Props) {
           helpText="프로젝트 분석 기간"
         />
 
+        <Slider
+          label="건설 기간"
+          value={config.constructionPeriod}
+          onChange={(v) => update('constructionPeriod', v)}
+          min={0}
+          max={3}
+          step={1}
+          unit="년"
+          helpText="CAPEX 투입 및 건설 소요 기간"
+        />
+
         <div className="border-t border-gray-200 pt-4">
           <h4 className="text-sm font-medium text-gray-900 mb-4">자금 조달</h4>
 
@@ -91,7 +102,18 @@ export default function FinancialConfig({ config, onChange }: Props) {
               max={25}
               step={1}
               unit="년"
-              helpText="원리금 상환 기간"
+              helpText="원리금 상환 기간 (거치기간 포함)"
+            />
+
+            <Slider
+              label="거치 기간"
+              value={config.gracePeriod}
+              onChange={(v) => update('gracePeriod', v)}
+              min={0}
+              max={3}
+              step={1}
+              unit="년"
+              helpText="이자만 납부하는 기간 (건설기간 포함)"
             />
           </>
         )}

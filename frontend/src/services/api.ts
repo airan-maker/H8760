@@ -121,6 +121,17 @@ export const simulationApi = {
           debt_ratio: input.financial.debtRatio,
           interest_rate: input.financial.interestRate,
           loan_tenor: input.financial.loanTenor,
+          construction_period: input.financial.constructionPeriod,
+          grace_period: input.financial.gracePeriod,
+        },
+        tax: {
+          corporate_tax_rate: input.tax.corporateTaxRate,
+          local_tax_rate: input.tax.localTaxRate,
+          depreciation_method: input.tax.depreciationMethod,
+          electrolyzer_useful_life: input.tax.electrolyzerUsefulLife,
+          building_useful_life: input.tax.buildingUsefulLife,
+          building_ratio: input.tax.buildingRatio,
+          salvage_value_rate: input.tax.salvageValueRate,
         },
         risk_weights: {
           weather_variability: input.riskWeights.weatherVariability,
@@ -158,6 +169,10 @@ export const simulationApi = {
         var95: data.kpis.var95,
         annualH2Production: data.kpis.annualH2Production,
         lcoh: data.kpis.lcoh,
+        // Bankability 추가 지표
+        npvAfterTax: data.kpis.npvAfterTax,
+        equityIrr: data.kpis.equityIrr,
+        coverageRatios: data.kpis.coverageRatios,
       },
       hourlyData: data.hourlyData
         ? {
@@ -184,9 +199,17 @@ export const simulationApi = {
         year: c.year,
         revenue: c.revenue,
         opex: c.opex,
+        depreciation: c.depreciation || 0,
+        ebitda: c.ebitda || 0,
+        ebit: c.ebit || 0,
+        tax: c.tax || 0,
         debtService: c.debtService,
+        interestExpense: c.interestExpense || 0,
+        principalRepayment: c.principalRepayment || 0,
         netCashflow: c.netCashflow,
+        netCashflowAfterTax: c.netCashflowAfterTax || c.netCashflow,
         cumulativeCashflow: c.cumulativeCashflow,
+        dscr: c.dscr || 0,
       })),
     };
   },

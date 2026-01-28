@@ -7,6 +7,7 @@ import {
   CostConfig,
   MarketConfig,
   FinancialConfig,
+  TaxConfig,
   IncentivesConfig,
   RiskWeightConfig,
 } from '../components/input';
@@ -14,7 +15,7 @@ import { simulationApi } from '../services/api';
 import type { SimulationInput, SimulationResult } from '../types';
 import { useSimulationContext } from '../contexts/SimulationContext';
 
-type TabType = 'preset' | 'equipment' | 'cost' | 'market' | 'financial' | 'incentives' | 'risk';
+type TabType = 'preset' | 'equipment' | 'cost' | 'market' | 'financial' | 'tax' | 'incentives' | 'risk';
 
 export default function SimulationConfig() {
   const navigate = useNavigate();
@@ -103,6 +104,10 @@ export default function SimulationConfig() {
         var95: baseNpv * -0.1,
         annualH2Production: { p50: annualProduction, p90: annualProduction * 0.9, p99: annualProduction * 0.8 },
         lcoh: lcoh,
+        // Bankability 추가 지표
+        npvAfterTax: { p50: baseNpv * 0.78, p90: baseNpv * 0.78 * 0.85, p99: baseNpv * 0.78 * 0.7 },
+        equityIrr: { p50: irr * 1.3, p90: irr * 1.3 * 0.9, p99: irr * 1.3 * 0.8 },
+        coverageRatios: { llcr: 1.35, plcr: 1.52 },
       },
       hourlyData: {
         production: Array.from({ length: 8760 }, (_, h) => {
@@ -142,6 +147,8 @@ export default function SimulationConfig() {
         const yearRevenue = annualRevenue * Math.pow(1 + (input.market.h2PriceEscalation / 100), i);
         const yearOpex = annualOpex * Math.pow(1.02, i);
         const debtService = i < input.financial.loanTenor ? effectiveCapex * input.financial.debtRatio / 100 / input.financial.loanTenor * (1 + input.financial.interestRate / 100) : 0;
+        const interestExpense = i < input.financial.loanTenor ? effectiveCapex * input.financial.debtRatio / 100 * (input.financial.interestRate / 100) * Math.pow(0.95, i) : 0;
+        const principalRepayment = debtService - interestExpense;
 
         // 기간 제한 인센티브 추가
         const yearPtc = (incentives.ptcEnabled && i < incentives.ptcDuration)
@@ -149,14 +156,36 @@ export default function SimulationConfig() {
         const yearOperatingSubsidy = (incentives.operatingSubsidy > 0 && i < incentives.operatingSubsidyDuration)
           ? annualProduction * 1000 * incentives.operatingSubsidy : 0;
 
-        const netCashflow = yearRevenue - yearOpex - debtService + yearPtc + yearOperatingSubsidy;
+        // 감가상각 (정액법, 10년)
+        const depreciation = i < 10 ? effectiveCapex * 0.09 : 0;
+
+        // EBITDA, EBIT
+        const ebitda = yearRevenue + yearPtc + yearOperatingSubsidy - yearOpex;
+        const ebit = ebitda - depreciation;
+
+        // 세금 (세전 이익의 24.2%)
+        const taxableIncome = ebit - interestExpense;
+        const tax = taxableIncome > 0 ? taxableIncome * 0.242 : 0;
+
+        const netCashflow = ebitda - debtService;
+        const netCashflowAfterTax = ebitda - debtService - tax + depreciation - depreciation; // 감가상각은 비현금 비용
+        const dscr = debtService > 0 ? ebitda / debtService : 0;
+
         return {
           year: i + 1,
-          revenue: yearRevenue + yearPtc + yearOperatingSubsidy, // 인센티브를 수익에 포함
+          revenue: yearRevenue + yearPtc + yearOperatingSubsidy,
           opex: yearOpex,
+          depreciation: depreciation,
+          ebitda: ebitda,
+          ebit: ebit,
+          tax: tax,
           debtService: debtService,
+          interestExpense: interestExpense,
+          principalRepayment: principalRepayment,
           netCashflow: netCashflow,
+          netCashflowAfterTax: netCashflowAfterTax,
           cumulativeCashflow: -effectiveCapex + netCashflow * (i + 1),
+          dscr: dscr,
         };
       }),
     };
@@ -209,6 +238,7 @@ export default function SimulationConfig() {
     { id: 'cost', label: '비용' },
     { id: 'market', label: '시장' },
     { id: 'financial', label: '재무' },
+    { id: 'tax', label: '세금' },
     { id: 'incentives', label: '인센티브' },
     { id: 'risk', label: '리스크' },
   ];
@@ -237,6 +267,11 @@ export default function SimulationConfig() {
     financial: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+    ),
+    tax: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
       </svg>
     ),
     incentives: (
@@ -350,6 +385,12 @@ export default function SimulationConfig() {
             <FinancialConfig
               config={input.financial}
               onChange={(financial) => setInput({ ...input, financial })}
+            />
+          )}
+          {activeTab === 'tax' && (
+            <TaxConfig
+              config={input.tax}
+              onChange={(tax) => setInput({ ...input, tax })}
             />
           )}
           {activeTab === 'incentives' && (
