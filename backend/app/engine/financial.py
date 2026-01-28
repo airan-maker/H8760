@@ -52,10 +52,15 @@ class FinancialConfig:
     debt_ratio: float  # 부채 비율 (%)
     interest_rate: float  # 대출 이자율 (%)
     loan_tenor: int  # 대출 기간 (년)
-    # Bankability 추가 필드
+    # Bankability 추가 필드 (1순위)
     construction_period: int = 1  # 건설 기간 (년)
     grace_period: int = 1  # 대출 거치 기간 (년)
     tax_config: Optional[TaxConfig] = None  # 세금 설정
+    # 2순위: CAPEX 분할, 상환방식, 운전자본
+    capex_schedule: Optional[List[float]] = None  # CAPEX 분할 비율 (기본: [0.3, 0.4, 0.3])
+    repayment_method: str = "equal_payment"  # 상환방식: equal_payment(원리금균등), equal_principal(원금균등)
+    working_capital_months: int = 2  # 운전자본 개월수
+    include_idc: bool = True  # 건설기간 이자(IDC) 포함 여부
 
 
 @dataclass
@@ -92,11 +97,16 @@ class FinancialResult:
     dscr_min: float
     dscr_avg: float
     yearly_cashflows: List[YearlyCashflow]
-    # Bankability 추가 지표
+    # Bankability 추가 지표 (1순위)
     npv_after_tax: float = 0.0  # 세후 NPV
     equity_irr: float = 0.0  # 자기자본 IRR
     llcr: float = 0.0  # Loan Life Coverage Ratio
     plcr: float = 0.0  # Project Life Coverage Ratio
+    # 2순위: 추가 정보
+    total_capex_with_idc: float = 0.0  # IDC 포함 총 투자비
+    idc_amount: float = 0.0  # 건설기간 이자 (IDC)
+    working_capital: float = 0.0  # 초기 운전자본
+    salvage_value: float = 0.0  # 프로젝트 종료시 잔존가치
 
 
 def calculate_debt_service(
@@ -126,7 +136,84 @@ def calculate_debt_service(
     return [pmt] * tenor
 
 
-def calculate_debt_service_detailed(
+def calculate_capex_schedule_with_idc(
+    capex: float,
+    construction_period: int,
+    capex_schedule: Optional[List[float]],
+    debt_ratio: float,
+    interest_rate: float,
+    include_idc: bool = True,
+) -> Tuple[List[float], float, float]:
+    """
+    CAPEX 분할 투입 및 건설기간 이자(IDC) 계산
+
+    IDC (Interest During Construction):
+    건설기간 동안 발생하는 이자를 자본화하여 총 투자비에 포함
+
+    Args:
+        capex: 기본 CAPEX (원)
+        construction_period: 건설 기간 (년)
+        capex_schedule: CAPEX 분할 비율 (예: [0.3, 0.4, 0.3])
+        debt_ratio: 부채 비율 (%)
+        interest_rate: 대출 이자율 (%)
+        include_idc: IDC 포함 여부
+
+    Returns:
+        Tuple[List[float], float, float]:
+            - 연도별 CAPEX 투입액
+            - IDC 금액
+            - IDC 포함 총 CAPEX
+    """
+    if construction_period <= 0:
+        return [capex], 0.0, capex
+
+    # 기본 분할 비율 설정
+    if capex_schedule is None or len(capex_schedule) == 0:
+        # 건설기간에 맞게 균등 분할
+        capex_schedule = [1.0 / construction_period] * construction_period
+
+    # 분할 비율 정규화 (합계 1.0)
+    schedule_sum = sum(capex_schedule)
+    if schedule_sum != 1.0:
+        capex_schedule = [s / schedule_sum for s in capex_schedule]
+
+    # 건설기간에 맞게 스케줄 조정
+    if len(capex_schedule) < construction_period:
+        # 부족한 기간은 0으로 채움
+        capex_schedule = capex_schedule + [0.0] * (construction_period - len(capex_schedule))
+    elif len(capex_schedule) > construction_period:
+        # 초과 기간은 마지막에 합침
+        excess = sum(capex_schedule[construction_period:])
+        capex_schedule = capex_schedule[:construction_period]
+        capex_schedule[-1] += excess
+
+    # 연도별 CAPEX 투입액
+    yearly_capex = [capex * ratio for ratio in capex_schedule]
+
+    # IDC 계산
+    idc = 0.0
+    if include_idc and interest_rate > 0:
+        r = interest_rate / 100
+        debt_portion = debt_ratio / 100
+
+        # 각 투입분에 대해 건설 완료까지 발생하는 이자 계산
+        for year_idx, year_capex in enumerate(yearly_capex):
+            # 해당 연도 투입분의 부채 금액
+            debt_amount = year_capex * debt_portion
+
+            # 건설 완료까지 남은 기간 (연도 중간 투입 가정: 0.5년 차감)
+            remaining_years = construction_period - year_idx - 0.5
+
+            if remaining_years > 0:
+                # 복리 이자 계산
+                idc += debt_amount * ((1 + r) ** remaining_years - 1)
+
+    total_capex_with_idc = capex + idc
+
+    return yearly_capex, idc, total_capex_with_idc
+
+
+def calculate_debt_service_equal_principal(
     principal: float,
     interest_rate: float,
     tenor: int,
@@ -134,9 +221,9 @@ def calculate_debt_service_detailed(
     project_lifetime: int = 20,
 ) -> Tuple[List[float], List[float], List[float]]:
     """
-    거치기간을 포함한 상세 부채 상환 계산
+    원금균등상환 계산
 
-    거치기간 동안은 이자만 납부하고, 이후 원리금 균등상환
+    원금균등상환: 매년 동일한 원금을 상환하고, 이자는 잔액에 비례하여 감소
 
     Args:
         principal: 대출 원금
@@ -151,6 +238,140 @@ def calculate_debt_service_detailed(
             - 연도별 이자비용
             - 연도별 원금상환액
     """
+    if principal <= 0 or tenor <= 0:
+        return (
+            [0.0] * project_lifetime,
+            [0.0] * project_lifetime,
+            [0.0] * project_lifetime,
+        )
+
+    r = interest_rate / 100
+    total_ds = []
+    interest_payments = []
+    principal_payments = []
+
+    remaining_principal = principal
+    repayment_tenor = tenor - grace_period  # 실제 상환 기간
+
+    # 원금균등상환: 매년 상환할 원금
+    if repayment_tenor > 0:
+        annual_principal = principal / repayment_tenor
+    else:
+        annual_principal = 0
+
+    for year in range(1, project_lifetime + 1):
+        if year <= grace_period:
+            # 거치기간: 이자만 납부
+            interest = remaining_principal * r
+            principal_payment = 0
+            ds = interest
+        elif year <= tenor:
+            # 상환기간: 원금균등 + 잔액 기준 이자
+            interest = remaining_principal * r
+            principal_payment = annual_principal
+            remaining_principal -= principal_payment
+            ds = interest + principal_payment
+        else:
+            # 상환 완료
+            interest = 0
+            principal_payment = 0
+            ds = 0
+
+        total_ds.append(ds)
+        interest_payments.append(interest)
+        principal_payments.append(principal_payment)
+
+    return total_ds, interest_payments, principal_payments
+
+
+def calculate_working_capital(
+    annual_opex: float,
+    working_capital_months: int,
+) -> float:
+    """
+    초기 운전자본 계산
+
+    운전자본: 프로젝트 시작 시 필요한 운영자금 (보통 2~3개월 OPEX)
+
+    Args:
+        annual_opex: 연간 OPEX
+        working_capital_months: 운전자본 개월수
+
+    Returns:
+        float: 초기 운전자본 금액
+    """
+    if working_capital_months <= 0:
+        return 0.0
+
+    monthly_opex = annual_opex / 12
+    return monthly_opex * working_capital_months
+
+
+def calculate_salvage_value(
+    capex: float,
+    salvage_value_rate: float,
+    project_lifetime: int,
+    discount_rate: float,
+) -> Tuple[float, float]:
+    """
+    프로젝트 종료시 잔존가치 계산
+
+    Args:
+        capex: 총 CAPEX
+        salvage_value_rate: 잔존가치율 (%)
+        project_lifetime: 프로젝트 기간
+        discount_rate: 할인율 (%)
+
+    Returns:
+        Tuple[float, float]:
+            - 명목 잔존가치
+            - 현재가치 (할인된 잔존가치)
+    """
+    salvage_value = capex * (salvage_value_rate / 100)
+
+    # 현재가치로 할인
+    r = discount_rate / 100
+    salvage_value_pv = salvage_value / ((1 + r) ** project_lifetime)
+
+    return salvage_value, salvage_value_pv
+
+
+def calculate_debt_service_detailed(
+    principal: float,
+    interest_rate: float,
+    tenor: int,
+    grace_period: int = 0,
+    project_lifetime: int = 20,
+    repayment_method: str = "equal_payment",
+) -> Tuple[List[float], List[float], List[float]]:
+    """
+    거치기간을 포함한 상세 부채 상환 계산
+
+    상환방식:
+    - equal_payment (원리금균등): 매년 동일한 금액(원금+이자) 상환
+    - equal_principal (원금균등): 매년 동일한 원금 상환, 이자는 감소
+
+    Args:
+        principal: 대출 원금
+        interest_rate: 연 이자율 (%)
+        tenor: 대출 기간 (년) - 거치기간 포함
+        grace_period: 거치 기간 (년)
+        project_lifetime: 프로젝트 기간 (년)
+        repayment_method: 상환방식 (equal_payment/equal_principal)
+
+    Returns:
+        Tuple[List[float], List[float], List[float]]:
+            - 연도별 총 부채상환액
+            - 연도별 이자비용
+            - 연도별 원금상환액
+    """
+    # 원금균등상환인 경우 별도 함수 사용
+    if repayment_method == "equal_principal":
+        return calculate_debt_service_equal_principal(
+            principal, interest_rate, tenor, grace_period, project_lifetime
+        )
+
+    # 원리금균등상환 (기본)
     if principal <= 0 or tenor <= 0:
         return (
             [0.0] * project_lifetime,
@@ -513,28 +734,53 @@ def run_financial_analysis(
     # 세금 설정 (기본값 사용)
     tax_config = config.tax_config if config.tax_config else TaxConfig()
 
-    # 부채 계산
-    debt_amount = config.capex * (config.debt_ratio / 100)
-    equity_amount = config.capex - debt_amount
+    # CAPEX 분할 및 IDC 계산 (2순위)
+    yearly_capex, idc_amount, total_capex_with_idc = calculate_capex_schedule_with_idc(
+        capex=config.capex,
+        construction_period=config.construction_period,
+        capex_schedule=config.capex_schedule,
+        debt_ratio=config.debt_ratio,
+        interest_rate=config.interest_rate,
+        include_idc=config.include_idc,
+    )
 
-    # 상세 부채 상환 계산 (거치기간 포함)
+    # 실제 투자비 (IDC 포함)
+    effective_capex = total_capex_with_idc
+
+    # 부채 계산 (IDC 포함 CAPEX 기준)
+    debt_amount = effective_capex * (config.debt_ratio / 100)
+    equity_amount = effective_capex - debt_amount
+
+    # OPEX 계산 (운전자본 계산에 필요)
+    annual_opex = config.capex * (config.opex_ratio / 100)  # 원래 CAPEX 기준
+
+    # 운전자본 계산 (2순위)
+    working_capital = calculate_working_capital(annual_opex, config.working_capital_months)
+
+    # 잔존가치 계산 (2순위)
+    salvage_value, salvage_value_pv = calculate_salvage_value(
+        config.capex,
+        tax_config.salvage_value_rate,
+        config.project_lifetime,
+        config.discount_rate,
+    )
+
+    # 상세 부채 상환 계산 (거치기간 및 상환방식 포함)
     debt_service_total, interest_payments, principal_payments = calculate_debt_service_detailed(
         debt_amount,
         config.interest_rate,
         config.loan_tenor,
         config.grace_period,
         config.project_lifetime,
+        config.repayment_method,
     )
 
-    # 감가상각 계산
+    # 감가상각 계산 (원래 CAPEX 기준, IDC 제외)
     depreciation_schedule = calculate_depreciation(
         config.capex,
         tax_config,
         config.project_lifetime,
     )
-
-    # OPEX
-    annual_opex = config.capex * (config.opex_ratio / 100)
 
     # 스택 교체 연도 결정 (운전 시간 기반)
     if stack_replacement_years is None:
@@ -554,10 +800,12 @@ def run_financial_analysis(
             stack_replacement_years = []
 
     # 현금흐름 계산 (세전/세후)
-    cashflows_before_tax = [-equity_amount]
-    cashflows_after_tax = [-equity_amount]
+    # 초기 투자 = 자기자본 + 운전자본
+    initial_equity_investment = equity_amount + working_capital
+    cashflows_before_tax = [-initial_equity_investment]
+    cashflows_after_tax = [-initial_equity_investment]
     yearly_cashflows = []
-    cumulative = -equity_amount
+    cumulative = -initial_equity_investment
     dscr_values = []
 
     for year in range(1, config.project_lifetime + 1):
@@ -608,6 +856,13 @@ def run_financial_analysis(
         # = 순이익 + 감가상각비 - 원금상환
         # (감가상각비는 비현금 비용이므로 다시 더함)
         net_cf_after_tax = net_income + depreciation - principal
+
+        # 마지막 연도: 잔존가치 및 운전자본 회수 반영
+        terminal_value = 0.0
+        if year == config.project_lifetime:
+            terminal_value = salvage_value + working_capital
+            net_cf_before_tax += terminal_value
+            net_cf_after_tax += terminal_value
 
         cashflows_before_tax.append(net_cf_before_tax)
         cashflows_after_tax.append(net_cf_after_tax)
@@ -687,11 +942,16 @@ def run_financial_analysis(
         dscr_min=dscr_min,
         dscr_avg=dscr_avg,
         yearly_cashflows=yearly_cashflows,
-        # Bankability 추가 지표
+        # Bankability 추가 지표 (1순위)
         npv_after_tax=npv_after_tax,
         equity_irr=equity_irr if equity_irr else 0,
         llcr=llcr,
         plcr=plcr,
+        # 2순위 추가 정보
+        total_capex_with_idc=total_capex_with_idc,
+        idc_amount=idc_amount,
+        working_capital=working_capital,
+        salvage_value=salvage_value,
     )
 
 

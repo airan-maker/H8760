@@ -122,12 +122,25 @@ class YearlyCashflow(CamelCaseModel):
     dscr: float = Field(default=0, description="해당 연도 DSCR")
 
 
+class CapitalSummary(CamelCaseModel):
+    """투자 자본 요약 (Bankability 2순위)"""
+
+    total_capex: float = Field(description="총 CAPEX (원)")
+    idc_amount: float = Field(default=0, description="건설기간 이자 IDC (원)")
+    total_capex_with_idc: float = Field(default=0, description="IDC 포함 총 투자비 (원)")
+    debt_amount: float = Field(description="부채 금액 (원)")
+    equity_amount: float = Field(description="자기자본 금액 (원)")
+    working_capital: float = Field(default=0, description="운전자본 (원)")
+    salvage_value: float = Field(default=0, description="잔존가치 (원)")
+
+
 class SimulationResult(CamelCaseModel):
     """전체 시뮬레이션 결과"""
 
     simulation_id: str = Field(description="시뮬레이션 ID")
     status: str = Field(description="시뮬레이션 상태")
     kpis: KPIs = Field(description="핵심 성과 지표")
+    capital_summary: Optional[CapitalSummary] = Field(None, description="투자 자본 요약")
     hourly_data: Optional[HourlyData] = Field(None, description="시간별 데이터")
     distributions: Distributions = Field(description="확률 분포")
     sensitivity: List[SensitivityItem] = Field(description="민감도 분석")

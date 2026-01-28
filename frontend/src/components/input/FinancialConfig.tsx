@@ -7,7 +7,7 @@ interface Props {
 }
 
 export default function FinancialConfig({ config, onChange }: Props) {
-  const update = (key: keyof FinancialConfigType, value: number) => {
+  const update = <K extends keyof FinancialConfigType>(key: K, value: FinancialConfigType[K]) => {
     onChange({ ...config, [key]: value });
   };
 
@@ -115,8 +115,88 @@ export default function FinancialConfig({ config, onChange }: Props) {
               unit="년"
               helpText="이자만 납부하는 기간 (건설기간 포함)"
             />
+
+            {/* 상환방식 선택 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                상환 방식
+              </label>
+              <div className="flex gap-4">
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="repaymentMethod"
+                    value="equal_payment"
+                    checked={config.repaymentMethod === 'equal_payment'}
+                    onChange={() => update('repaymentMethod', 'equal_payment')}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">원리금균등</span>
+                </label>
+                <label className="flex items-center">
+                  <input
+                    type="radio"
+                    name="repaymentMethod"
+                    value="equal_principal"
+                    checked={config.repaymentMethod === 'equal_principal'}
+                    onChange={() => update('repaymentMethod', 'equal_principal')}
+                    className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">원금균등</span>
+                </label>
+              </div>
+              <p className="text-xs text-gray-500">
+                {config.repaymentMethod === 'equal_payment'
+                  ? '매년 동일한 원리금 상환 (초기 이자 비중 높음)'
+                  : '매년 동일한 원금 상환 (초기 상환액 높음, 점점 감소)'}
+              </p>
+            </div>
+
+            {/* IDC 포함 여부 */}
+            <div className="flex items-center justify-between py-2">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  건설기간 이자 (IDC) 포함
+                </label>
+                <p className="text-xs text-gray-500">
+                  건설기간 동안 발생하는 이자를 총 투자비에 포함
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => update('includeIdc', !config.includeIdc)}
+                className={`
+                  relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent
+                  transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+                  ${config.includeIdc ? 'bg-primary-600' : 'bg-gray-200'}
+                `}
+              >
+                <span
+                  className={`
+                    pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0
+                    transition duration-200 ease-in-out
+                    ${config.includeIdc ? 'translate-x-5' : 'translate-x-0'}
+                  `}
+                />
+              </button>
+            </div>
           </>
         )}
+
+        {/* 운전자본 설정 */}
+        <div className="border-t border-gray-200 pt-4">
+          <h4 className="text-sm font-medium text-gray-900 mb-4">운전자본</h4>
+          <Slider
+            label="운전자본 개월수"
+            value={config.workingCapitalMonths}
+            onChange={(v) => update('workingCapitalMonths', v)}
+            min={0}
+            max={6}
+            step={1}
+            unit="개월"
+            helpText="초기 운영자금 (OPEX 기준, 프로젝트 종료시 회수)"
+          />
+        </div>
       </div>
     </Card>
   );

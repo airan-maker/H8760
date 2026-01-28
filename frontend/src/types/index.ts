@@ -35,9 +35,14 @@ export interface FinancialConfig {
   debtRatio: number; // %
   interestRate: number; // %
   loanTenor: number; // years
-  // Bankability 추가 필드
+  // Bankability 추가 필드 (1순위)
   constructionPeriod: number; // years - 건설 기간
   gracePeriod: number; // years - 대출 거치 기간
+  // Bankability 추가 필드 (2순위)
+  capexSchedule: number[]; // CAPEX 분할 비율 (예: [0.3, 0.4, 0.3])
+  repaymentMethod: 'equal_payment' | 'equal_principal'; // 상환방식
+  workingCapitalMonths: number; // 운전자본 개월수 (OPEX 기준)
+  includeIdc: boolean; // IDC(건설기간 이자) 포함 여부
 }
 
 // 세금 및 감가상각 설정 (Bankability 평가 필수 요소)
@@ -158,6 +163,17 @@ export interface RiskWaterfallItem {
   impact: number;
 }
 
+// 투자 자본 요약 (Bankability 2순위)
+export interface CapitalSummary {
+  totalCapex: number; // 총 CAPEX (원)
+  idcAmount: number; // 건설기간 이자 IDC (원)
+  totalCapexWithIdc: number; // IDC 포함 총 투자비 (원)
+  debtAmount: number; // 부채 금액 (원)
+  equityAmount: number; // 자기자본 금액 (원)
+  workingCapital: number; // 운전자본 (원)
+  salvageValue: number; // 잔존가치 (원)
+}
+
 // 연간 현금흐름 (프로젝트 파이낸스 표준 형식)
 export interface YearlyCashflow {
   year: number;
@@ -188,6 +204,7 @@ export interface SimulationResult {
   simulationId: string;
   status: string;
   kpis: KPIs;
+  capitalSummary?: CapitalSummary; // 투자 자본 요약 (2순위)
   hourlyData?: HourlyData;
   distributions: {
     npvHistogram: HistogramBin[];
@@ -258,6 +275,11 @@ export const defaultSimulationInput: SimulationInput = {
     loanTenor: 15,                   // 년
     constructionPeriod: 1,           // 년 (건설 기간)
     gracePeriod: 1,                  // 년 (대출 거치 기간)
+    // 2순위: CAPEX 분할, 상환방식, 운전자본
+    capexSchedule: [0.3, 0.4, 0.3],  // CAPEX 분할 비율 (건설기간별)
+    repaymentMethod: 'equal_payment' as const, // 원리금균등
+    workingCapitalMonths: 2,         // 운전자본 2개월분
+    includeIdc: true,                // IDC 포함
   },
   tax: {
     corporateTaxRate: 22,            // % (한국 법인세 기본세율)

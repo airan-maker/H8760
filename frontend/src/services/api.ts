@@ -123,6 +123,11 @@ export const simulationApi = {
           loan_tenor: input.financial.loanTenor,
           construction_period: input.financial.constructionPeriod,
           grace_period: input.financial.gracePeriod,
+          // 2순위: CAPEX 분할, 상환방식, 운전자본
+          capex_schedule: input.financial.capexSchedule,
+          repayment_method: input.financial.repaymentMethod,
+          working_capital_months: input.financial.workingCapitalMonths,
+          include_idc: input.financial.includeIdc,
         },
         tax: {
           corporate_tax_rate: input.tax.corporateTaxRate,
@@ -161,6 +166,15 @@ export const simulationApi = {
     return {
       simulationId: data.simulationId,
       status: data.status,
+      capitalSummary: data.capitalSummary ? {
+        totalCapex: data.capitalSummary.totalCapex,
+        idcAmount: data.capitalSummary.idcAmount || 0,
+        totalCapexWithIdc: data.capitalSummary.totalCapexWithIdc || data.capitalSummary.totalCapex,
+        debtAmount: data.capitalSummary.debtAmount,
+        equityAmount: data.capitalSummary.equityAmount,
+        workingCapital: data.capitalSummary.workingCapital || 0,
+        salvageValue: data.capitalSummary.salvageValue || 0,
+      } : undefined,
       kpis: {
         npv: data.kpis.npv,
         irr: data.kpis.irr,

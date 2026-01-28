@@ -27,6 +27,7 @@ from app.schemas.result import (
     PercentileValue,
     DSCRMetrics,
     LLCRMetrics,
+    CapitalSummary,
     HourlyData,
     Distributions,
     HistogramBin,
@@ -172,6 +173,11 @@ def run_full_simulation(
         construction_period=financial.construction_period,
         grace_period=financial.grace_period,
         tax_config=tax_config,
+        # 2순위: CAPEX 분할, 상환방식, 운전자본
+        capex_schedule=financial.capex_schedule,
+        repayment_method=financial.repayment_method,
+        working_capital_months=financial.working_capital_months,
+        include_idc=financial.include_idc,
     )
 
     # 재무 분석 실행
@@ -190,6 +196,14 @@ def run_full_simulation(
     log_progress("  └ LLCR", f"{fin_result.llcr:.2f}")
     log_progress("  └ PLCR", f"{fin_result.plcr:.2f}")
     log_progress("  └ 투자회수기간", f"{fin_result.payback_period:.1f}년")
+    # 2순위: 자본 구조 정보
+    if fin_result.idc_amount > 0:
+        log_progress("  └ IDC (건설기간이자)", f"{fin_result.idc_amount/1e8:.1f}억원")
+        log_progress("  └ 총 투자비 (IDC 포함)", f"{fin_result.total_capex_with_idc/1e8:.1f}억원")
+    if fin_result.working_capital > 0:
+        log_progress("  └ 운전자본", f"{fin_result.working_capital/1e8:.1f}억원")
+    if fin_result.salvage_value > 0:
+        log_progress("  └ 잔존가치", f"{fin_result.salvage_value/1e8:.1f}억원")
 
     # 몬테카를로 시뮬레이션
     print("-"*60, flush=True)
@@ -307,10 +321,23 @@ def run_full_simulation(
     log_progress("시뮬레이션 완료", f"총 소요시간 {total_elapsed:.2f}초")
     print("="*60 + "\n", flush=True)
 
+    # 자본 구조 계산
+    debt_amount = fin_result.total_capex_with_idc * (financial.debt_ratio / 100)
+    equity_amount = fin_result.total_capex_with_idc - debt_amount
+
     # 결과 조합
     return SimulationResult(
         simulation_id=simulation_id,
         status="completed",
+        capital_summary=CapitalSummary(
+            total_capex=cost.capex,
+            idc_amount=fin_result.idc_amount,
+            total_capex_with_idc=fin_result.total_capex_with_idc,
+            debt_amount=debt_amount,
+            equity_amount=equity_amount,
+            working_capital=fin_result.working_capital,
+            salvage_value=fin_result.salvage_value,
+        ),
         kpis=KPIs(
             npv=PercentileValue(
                 p50=mc_result.npv_p50,

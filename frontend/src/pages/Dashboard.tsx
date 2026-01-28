@@ -72,6 +72,12 @@ const generateSimulationCSV = (input: SimulationInput, result: SimulationResult)
   addRow('자기자본', Math.round(input.cost.capex * (100 - input.financial.debtRatio) / 100), '원', 'CAPEX × (1 - 부채비율)');
   addRow('대출 이자율', input.financial.interestRate, '%');
   addRow('대출 기간', input.financial.loanTenor, '년');
+  addRow('건설 기간', input.financial.constructionPeriod, '년', 'CAPEX 투입 기간');
+  addRow('거치 기간', input.financial.gracePeriod, '년', '이자만 납부하는 기간');
+  addRow('상환 방식', input.financial.repaymentMethod === 'equal_payment' ? '원리금균등' : '원금균등');
+  addRow('운전자본 개월수', input.financial.workingCapitalMonths, '개월', 'OPEX 기준 초기 운영자금');
+  addRow('IDC 포함 여부', input.financial.includeIdc ? '예' : '아니오', '', '건설기간 이자 자본화');
+  addRow('CAPEX 분할', input.financial.capexSchedule?.join(', ') || '1.0', '', '건설기간별 투입 비율');
 
   // ========== 6. 입력 변수 - 인센티브 ==========
   addSection('6. 입력 변수 - 인센티브');
@@ -110,17 +116,49 @@ const generateSimulationCSV = (input: SimulationInput, result: SimulationResult)
   addRow('원리금균등상환', 'PMT = P × r(1+r)^n / ((1+r)^n - 1)', '원/년', 'P=원금, r=이자율, n=기간');
   addRow('VaR 95%', '몬테카를로 분포의 5번째 백분위수', '원', '5% 확률로 발생 가능한 최대 손실');
 
-  // ========== 9. KPI 결과 ==========
-  addSection('9. KPI 결과');
+  // ========== 9. 자본 구조 요약 (Bankability 2순위) ==========
+  if (result.capitalSummary) {
+    addSection('9. 자본 구조 요약');
+    addRow('기본 CAPEX', result.capitalSummary.totalCapex, '원');
+    addRow('기본 CAPEX', Math.round(result.capitalSummary.totalCapex / 100000000), '억원');
+    addRow('IDC (건설기간 이자)', result.capitalSummary.idcAmount, '원', '건설기간 동안 발생한 이자 자본화');
+    addRow('IDC', Math.round(result.capitalSummary.idcAmount / 100000000), '억원');
+    addRow('총 투자비 (IDC 포함)', result.capitalSummary.totalCapexWithIdc, '원');
+    addRow('총 투자비', Math.round(result.capitalSummary.totalCapexWithIdc / 100000000), '억원');
+    addRow('부채 금액', result.capitalSummary.debtAmount, '원');
+    addRow('부채 금액', Math.round(result.capitalSummary.debtAmount / 100000000), '억원');
+    addRow('자기자본 금액', result.capitalSummary.equityAmount, '원');
+    addRow('자기자본 금액', Math.round(result.capitalSummary.equityAmount / 100000000), '억원');
+    addRow('운전자본', result.capitalSummary.workingCapital, '원', '초기 운영자금 (프로젝트 종료시 회수)');
+    addRow('운전자본', Math.round(result.capitalSummary.workingCapital / 100000000), '억원');
+    addRow('잔존가치', result.capitalSummary.salvageValue, '원', '프로젝트 종료시 자산 가치');
+    addRow('잔존가치', Math.round(result.capitalSummary.salvageValue / 100000000), '억원');
+  }
+
+  // ========== 10. KPI 결과 ==========
+  addSection('10. KPI 결과');
   addRow('NPV (P50)', result.kpis.npv.p50, '원', '50% 확률로 이 값 이상');
   addRow('NPV (P50) 억원', Math.round(result.kpis.npv.p50 / 100000000), '억원');
   addRow('NPV (P90)', result.kpis.npv.p90, '원', '90% 확률로 이 값 이상');
   addRow('NPV (P99)', result.kpis.npv.p99, '원', '99% 확률로 이 값 이상');
-  addRow('IRR (P50)', result.kpis.irr.p50, '%');
-  addRow('IRR (P90)', result.kpis.irr.p90, '%');
-  addRow('IRR (P99)', result.kpis.irr.p99, '%');
+  // Bankability 추가 지표
+  if (result.kpis.npvAfterTax) {
+    addRow('NPV 세후 (P50)', result.kpis.npvAfterTax.p50, '원', '법인세 반영');
+    addRow('NPV 세후 (P50) 억원', Math.round(result.kpis.npvAfterTax.p50 / 100000000), '억원');
+  }
+  addRow('Project IRR (P50)', result.kpis.irr.p50, '%');
+  addRow('Project IRR (P90)', result.kpis.irr.p90, '%');
+  addRow('Project IRR (P99)', result.kpis.irr.p99, '%');
+  if (result.kpis.equityIrr) {
+    addRow('Equity IRR (P50)', result.kpis.equityIrr.p50, '%', '자기자본 수익률');
+    addRow('Equity IRR (P90)', result.kpis.equityIrr.p90, '%');
+  }
   addRow('DSCR (최소)', result.kpis.dscr.min, '', '최소 부채상환비율');
   addRow('DSCR (평균)', result.kpis.dscr.avg, '', '평균 부채상환비율');
+  if (result.kpis.coverageRatios) {
+    addRow('LLCR', result.kpis.coverageRatios.llcr, '', 'Loan Life Coverage Ratio');
+    addRow('PLCR', result.kpis.coverageRatios.plcr, '', 'Project Life Coverage Ratio');
+  }
   addRow('투자회수기간', result.kpis.paybackPeriod, '년');
   addRow('VaR 95%', result.kpis.var95, '원', '최악 시나리오 손실');
   addRow('LCOH', result.kpis.lcoh, '원/kg', '균등화 수소 비용');
@@ -128,15 +166,15 @@ const generateSimulationCSV = (input: SimulationInput, result: SimulationResult)
   addRow('연간 수소 생산량 (P90)', result.kpis.annualH2Production.p90, '톤/년');
   addRow('연간 수소 생산량 (P99)', result.kpis.annualH2Production.p99, '톤/년');
 
-  // ========== 10. 연간 현금흐름 ==========
-  addSection('10. 연간 현금흐름 상세');
-  lines.push('년도,수익(원),운영비(원),부채상환(원),순현금흐름(원),누적현금흐름(원)');
+  // ========== 11. 연간 현금흐름 ==========
+  addSection('11. 연간 현금흐름 상세');
+  lines.push('년도,수익(원),운영비(원),감가상각(원),EBITDA(원),EBIT(원),이자비용(원),원금상환(원),법인세(원),세전순현금흐름(원),세후순현금흐름(원),누적현금흐름(원),DSCR');
   result.yearlyCashflow.forEach(cf => {
-    lines.push(`${cf.year},${cf.revenue},${cf.opex},${cf.debtService},${cf.netCashflow},${cf.cumulativeCashflow}`);
+    lines.push(`${cf.year},${cf.revenue},${cf.opex},${cf.depreciation || 0},${cf.ebitda || 0},${cf.ebit || 0},${cf.interestExpense || 0},${cf.principalRepayment || 0},${cf.tax || 0},${cf.netCashflow},${cf.netCashflowAfterTax || cf.netCashflow},${cf.cumulativeCashflow},${cf.dscr || 0}`);
   });
 
-  // ========== 11. 민감도 분석 ==========
-  addSection('11. 민감도 분석 결과');
+  // ========== 12. 민감도 분석 ==========
+  addSection('12. 민감도 분석 결과');
   lines.push('변수,기준 NPV(원),하한 NPV(원),상한 NPV(원),하한 변화율(%),상한 변화율(%)');
   result.sensitivity.forEach(s => {
     const varName = {
@@ -149,22 +187,22 @@ const generateSimulationCSV = (input: SimulationInput, result: SimulationResult)
     lines.push(`"${varName}",${s.baseCase},${s.lowCase},${s.highCase},${s.lowChangePct},${s.highChangePct}`);
   });
 
-  // ========== 12. 리스크 폭포수 ==========
-  addSection('12. 리스크 폭포수');
+  // ========== 13. 리스크 폭포수 ==========
+  addSection('13. 리스크 폭포수');
   lines.push('요인,영향(원),영향(억원)');
   result.riskWaterfall.forEach(r => {
     lines.push(`"${r.factor}",${r.impact},${Math.round(r.impact / 100000000)}`);
   });
 
-  // ========== 13. NPV 분포 히스토그램 ==========
-  addSection('13. NPV 분포 (몬테카를로)');
+  // ========== 14. NPV 분포 히스토그램 ==========
+  addSection('14. NPV 분포 (몬테카를로)');
   lines.push('구간(원),빈도');
   result.distributions.npvHistogram.forEach(bin => {
     lines.push(`${bin.bin},${bin.count}`);
   });
 
-  // ========== 14. 검증용 중간 계산값 ==========
-  addSection('14. 검증용 중간 계산값');
+  // ========== 15. 검증용 중간 계산값 ==========
+  addSection('15. 검증용 중간 계산값');
   const annualProduction = input.equipment.electrolyzerCapacity * 1000 * 8760 * (input.equipment.annualAvailability / 100) / input.equipment.specificConsumption;
   const annualRevenue = annualProduction * input.market.h2Price;
   const annualOpex = input.cost.capex * (input.cost.opexRatio / 100);
@@ -227,6 +265,15 @@ const generateDemoResult = (): SimulationResult => {
   return {
     simulationId: 'demo-001',
     status: 'completed',
+    capitalSummary: {
+      totalCapex: 50000000000,
+      idcAmount: 1750000000,
+      totalCapexWithIdc: 51750000000,
+      debtAmount: 36225000000,
+      equityAmount: 15525000000,
+      workingCapital: 208333333,
+      salvageValue: 2500000000,
+    },
     kpis: {
       npv: { p50: npvBase, p90: npvBase * 0.85, p99: npvBase * 0.7 },
       irr: { p50: irrBase, p90: irrBase * 0.9, p99: irrBase * 0.8 },
@@ -235,6 +282,10 @@ const generateDemoResult = (): SimulationResult => {
       var95: -820000000,
       annualH2Production: { p50: 2500, p90: 2200, p99: 1900 },
       lcoh: 5200,
+      // Bankability 추가 지표
+      npvAfterTax: { p50: npvBase * 0.78, p90: npvBase * 0.78 * 0.85, p99: npvBase * 0.78 * 0.7 },
+      equityIrr: { p50: 18.5, p90: 15.7, p99: 12.9 },
+      coverageRatios: { llcr: 1.45, plcr: 1.82 },
     },
     hourlyData: {
       production: Array.from({ length: 8760 }, () => Math.random() * 300),
@@ -266,14 +317,37 @@ const generateDemoResult = (): SimulationResult => {
       { factor: '효율 저하', impact: -500000000 },
       { factor: '최종 NPV', impact: 12500000000 },
     ],
-    yearlyCashflow: Array.from({ length: 20 }, (_, i) => ({
-      year: i + 1,
-      revenue: 8000000000 * (1 + i * 0.01),
-      opex: 2000000000,
-      debtService: i < 15 ? 3500000000 : 0,
-      netCashflow: i < 15 ? 2500000000 : 6000000000,
-      cumulativeCashflow: -50000000000 + (i + 1) * (i < 15 ? 2500000000 : 6000000000),
-    })),
+    yearlyCashflow: Array.from({ length: 20 }, (_, i) => {
+      const revenue = 8000000000 * (1 + i * 0.01);
+      const opex = 2000000000;
+      const depreciation = i < 10 ? 4500000000 : (i < 40 ? 125000000 : 0);
+      const ebitda = revenue - opex;
+      const ebit = ebitda - depreciation;
+      const interestExpense = i < 15 ? (36225000000 - i * 2415000000) * 0.05 : 0;
+      const principalRepayment = i < 15 ? 2415000000 : 0;
+      const debtService = interestExpense + principalRepayment;
+      const taxableIncome = ebit - interestExpense;
+      const tax = taxableIncome > 0 ? taxableIncome * 0.242 : 0;
+      const netCashflow = ebitda - debtService;
+      const netCashflowAfterTax = ebitda - tax - debtService;
+
+      return {
+        year: i + 1,
+        revenue,
+        opex,
+        depreciation,
+        ebitda,
+        ebit,
+        tax,
+        debtService,
+        interestExpense,
+        principalRepayment,
+        netCashflow,
+        netCashflowAfterTax,
+        cumulativeCashflow: -50000000000 + (i + 1) * netCashflow,
+        dscr: debtService > 0 ? ebitda / debtService : Infinity,
+      };
+    }),
   };
 };
 
@@ -612,6 +686,71 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-8">
+      {/* 자본 구조 요약 (있는 경우에만 표시) */}
+      {result.capitalSummary && (
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">자본 구조</span>
+            <span className="flex-1 h-px bg-dark-100"></span>
+          </div>
+          <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <div className="text-center p-3 bg-dark-50 rounded-xl">
+                <div className="text-xs text-dark-400 mb-1">기본 CAPEX</div>
+                <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.totalCapex / 100000000).toFixed(0)}억</div>
+              </div>
+              {result.capitalSummary.idcAmount > 0 && (
+                <div className="text-center p-3 bg-amber-50 rounded-xl">
+                  <div className="text-xs text-amber-600 mb-1">IDC (건설이자)</div>
+                  <div className="text-lg font-bold text-amber-700">+{(result.capitalSummary.idcAmount / 100000000).toFixed(1)}억</div>
+                </div>
+              )}
+              <div className="text-center p-3 bg-primary-50 rounded-xl">
+                <div className="text-xs text-primary-600 mb-1">총 투자비</div>
+                <div className="text-lg font-bold text-primary-700">{(result.capitalSummary.totalCapexWithIdc / 100000000).toFixed(0)}억</div>
+              </div>
+              <div className="text-center p-3 bg-rose-50 rounded-xl">
+                <div className="text-xs text-rose-600 mb-1">부채</div>
+                <div className="text-lg font-bold text-rose-700">{(result.capitalSummary.debtAmount / 100000000).toFixed(0)}억</div>
+              </div>
+              <div className="text-center p-3 bg-emerald-50 rounded-xl">
+                <div className="text-xs text-emerald-600 mb-1">자기자본</div>
+                <div className="text-lg font-bold text-emerald-700">{(result.capitalSummary.equityAmount / 100000000).toFixed(0)}억</div>
+              </div>
+              {result.capitalSummary.workingCapital > 0 && (
+                <div className="text-center p-3 bg-blue-50 rounded-xl">
+                  <div className="text-xs text-blue-600 mb-1">운전자본</div>
+                  <div className="text-lg font-bold text-blue-700">{(result.capitalSummary.workingCapital / 100000000).toFixed(1)}억</div>
+                </div>
+              )}
+              {result.capitalSummary.salvageValue > 0 && (
+                <div className="text-center p-3 bg-violet-50 rounded-xl">
+                  <div className="text-xs text-violet-600 mb-1">잔존가치</div>
+                  <div className="text-lg font-bold text-violet-700">{(result.capitalSummary.salvageValue / 100000000).toFixed(0)}억</div>
+                </div>
+              )}
+            </div>
+            {/* 부채/자기자본 비율 바 */}
+            <div className="mt-4">
+              <div className="flex justify-between text-xs text-dark-500 mb-1">
+                <span>자기자본 ({((result.capitalSummary.equityAmount / result.capitalSummary.totalCapexWithIdc) * 100).toFixed(0)}%)</span>
+                <span>부채 ({((result.capitalSummary.debtAmount / result.capitalSummary.totalCapexWithIdc) * 100).toFixed(0)}%)</span>
+              </div>
+              <div className="h-3 rounded-full overflow-hidden flex bg-dark-100">
+                <div
+                  className="bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${(result.capitalSummary.equityAmount / result.capitalSummary.totalCapexWithIdc) * 100}%` }}
+                />
+                <div
+                  className="bg-rose-400 transition-all duration-300"
+                  style={{ width: `${(result.capitalSummary.debtAmount / result.capitalSummary.totalCapexWithIdc) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* KPI 카드 */}
       <section>
         <div className="flex items-center gap-2 mb-4">

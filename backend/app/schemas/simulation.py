@@ -118,6 +118,23 @@ class FinancialConfig(BaseModel):
     grace_period: int = Field(
         default=1, ge=0, le=5, description="대출 거치 기간 (년) - 건설기간 포함"
     )
+    # 2순위: CAPEX 분할, 상환방식, 운전자본
+    capex_schedule: list[float] = Field(
+        default=[0.3, 0.4, 0.3],
+        description="CAPEX 분할 비율 (건설기간별) - 합계 1.0"
+    )
+    repayment_method: Literal["equal_payment", "equal_principal"] = Field(
+        default="equal_payment",
+        description="상환방식 - equal_payment: 원리금균등, equal_principal: 원금균등"
+    )
+    working_capital_months: int = Field(
+        default=2, ge=0, le=6,
+        description="운전자본 개월수 (OPEX 기준) - 초기 운영자금"
+    )
+    include_idc: bool = Field(
+        default=True,
+        description="건설기간 이자(IDC) 포함 여부"
+    )
 
 
 class TaxConfig(BaseModel):
