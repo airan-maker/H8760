@@ -7,9 +7,9 @@ import { useEffect, useState } from 'react';
 import type { CountryPreset, SimulationInput } from '../../types';
 import { dataApi } from '../../services/api';
 
-// 기본 CAPEX 값 (10MW 기준, 150만원/kW)
-const BASE_CAPEX = 15_000_000_000;
-const BASE_STACK_COST = 1_650_000_000;
+// 기본 단가 (kW당 비용)
+const BASE_CAPEX_PER_KW = 1_500_000; // 150만원/kW
+const STACK_COST_RATIO = 0.11; // 스택 교체 비용 = CAPEX의 11%
 
 // 국가별 상세 정보 데이터
 const COUNTRY_DETAILS: Record<string, {
@@ -120,9 +120,11 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
     const preset = presets.find(p => p.id === selectedId);
     if (!preset) return;
 
-    // 기본 CAPEX에 국가별 계수 적용 (누적 방지)
-    const adjustedCapex = BASE_CAPEX * preset.capexMultiplier;
-    const adjustedStackCost = BASE_STACK_COST * preset.capexMultiplier;
+    // 전해조 용량 기반 CAPEX 계산 (용량 × 단가 × 국가 계수)
+    const capacityKw = currentInput.equipment.electrolyzerCapacity * 1000; // MW → kW
+    const baseCapex = capacityKw * BASE_CAPEX_PER_KW;
+    const adjustedCapex = baseCapex * preset.capexMultiplier;
+    const adjustedStackCost = adjustedCapex * STACK_COST_RATIO;
 
     onApply({
       cost: {
@@ -381,10 +383,10 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
-              {selectedPreset.name} 조건 적용 (10MW 기준)
+              {selectedPreset.name} 조건 적용
             </button>
             <p className="text-xs text-dark-400 text-center mt-2">
-              * 기본 CAPEX {(BASE_CAPEX / 100000000).toFixed(0)}억원 × {selectedPreset.capexMultiplier.toFixed(2)} = {((BASE_CAPEX * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원
+              * {currentInput.equipment.electrolyzerCapacity}MW × {(BASE_CAPEX_PER_KW / 10000).toFixed(0)}만원/kW × {selectedPreset.capexMultiplier.toFixed(2)} = {((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원
             </p>
           </div>
         )}
@@ -399,7 +401,7 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
               {selectedPreset.flagEmoji} {selectedPreset.name} 조건 적용
             </button>
             <p className="text-xs text-dark-400 text-center mt-1">
-              CAPEX: {((BASE_CAPEX * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원 (10MW 기준)
+              CAPEX: {((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원 ({currentInput.equipment.electrolyzerCapacity}MW 기준)
             </p>
           </div>
         )}
