@@ -339,6 +339,11 @@ class ClaudeService:
                 "title": "운영 패턴 분석",
                 "data_key": "input_summary",
                 "focus": "8760시간 운영 패턴이 보여주는 가동률과 생산 변동성"
+            },
+            "whatif": {
+                "title": "What-if 분석 해석",
+                "data_key": "sensitivity_summary",
+                "focus": "민감도 분석, 2변수 분석, 시나리오 비교 결과가 의미하는 바와 의사결정에 주는 시사점"
             }
         }
 

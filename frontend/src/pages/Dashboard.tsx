@@ -686,15 +686,6 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-8">
-      {/* Bankability 분석 - 최상단 배치 */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">Bankability 분석</span>
-          <span className="flex-1 h-px bg-dark-100"></span>
-        </div>
-        <AIInsightsPanel input={currentInput} result={result} />
-      </section>
-
       {/* 자본 구조 요약 (있는 경우에만 표시) */}
       {result.capitalSummary && (
         <section>
@@ -973,6 +964,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
           <WhatIfPanel input={currentInput} result={result} />
         </div>
+        <SectionExplainer section="whatif" context={analysisContext} className="mt-3" />
       </section>
 
       {/* 몬테카를로 분석 차트 (현재 비활성화) */}
@@ -1035,6 +1027,15 @@ export default function Dashboard() {
           <SectionExplainer section="heatmap" context={analysisContext} className="mt-3" />
         </section>
       )}
+
+      {/* AI 인사이트 (Bankability 분석, 금융 자문) */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">AI 인사이트</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <AIInsightsPanel input={currentInput} result={result} />
+      </section>
 
       </div>
 

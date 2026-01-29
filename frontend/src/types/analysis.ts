@@ -174,7 +174,7 @@ export interface ExplainResponse {
 }
 
 // 섹션 타입
-export type SectionType = 'kpi' | 'npv_distribution' | 'sensitivity' | 'waterfall' | 'cashflow' | 'heatmap';
+export type SectionType = 'kpi' | 'npv_distribution' | 'sensitivity' | 'waterfall' | 'cashflow' | 'heatmap' | 'whatif';
 
 // 추천 질문
 export interface SuggestedQuestion {
