@@ -9,7 +9,7 @@ import {
   Heatmap8760,
   CashflowChart,
 } from '../components/charts';
-import { AIInsightsPanel, SectionExplainer } from '../components/analysis';
+import { AIInsightsPanel, SectionExplainer, WhatIfPanel } from '../components/analysis';
 import type { SimulationResult, SimulationInput } from '../types';
 import type { SimulationContext } from '../types/analysis';
 import { useSimulationContext } from '../contexts/SimulationContext';
@@ -961,6 +961,17 @@ export default function Dashboard() {
         </div>
         <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
           <CashflowChart data={result.yearlyCashflow} />
+        </div>
+      </section>
+
+      {/* What-if 분석 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">What-if 분석</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
+          <WhatIfPanel input={currentInput} result={result} />
         </div>
       </section>
 

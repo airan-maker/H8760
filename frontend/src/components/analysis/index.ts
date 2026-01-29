@@ -5,3 +5,4 @@ export { AIInsightsPanel } from './AIInsightsPanel';
 export { InterpretationCard } from './InterpretationCard';
 export { ChatInterface } from './ChatInterface';
 export { SectionExplainer } from './SectionExplainer';
+export { default as WhatIfPanel } from './WhatIfPanel';
