@@ -183,25 +183,25 @@ export default function ProjectWizard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-10">
         {[
           {
-            icon: BoltIcon,
-            title: '몬테카를로 시뮬레이션',
-            desc: '10,000회 확률적 시뮬레이션으로 P50/P90/P99 신뢰구간 분석',
-            color: 'from-yellow-400 to-orange-500',
-            details: ['불확실성 정량화', '리스크 분포 분석', '민감도 분석'],
+            icon: CurrencyDollarIcon,
+            title: '연도별 현금흐름 분석',
+            desc: '프로젝트 기간 전체의 상세 현금흐름 추정 및 분석',
+            color: 'from-green-400 to-emerald-500',
+            details: ['수익/비용 상세 분해', '세후 현금흐름', '누적 현금흐름'],
           },
           {
             icon: ChartBarIcon,
-            title: '8760시간 운영 최적화',
+            title: '8760시간 운영 분석',
             desc: '연간 시간별 전력가격, 생산량, 운영 패턴 상세 분석',
             color: 'from-blue-400 to-cyan-500',
             details: ['시간별 전력비용', 'Capacity Factor', '계절별 패턴'],
           },
           {
-            icon: CurrencyDollarIcon,
+            icon: BoltIcon,
             title: '프로젝트 파이낸스 분석',
             desc: 'NPV, IRR, LCOH, DSCR 등 핵심 재무지표 자동 산출',
-            color: 'from-green-400 to-emerald-500',
-            details: ['현금흐름 분석', 'Bankability 평가', '레버리지 최적화'],
+            color: 'from-yellow-400 to-orange-500',
+            details: ['순현재가치(NPV)', '내부수익률(IRR)', '수소 균등화 비용(LCOH)'],
           },
           {
             icon: ShieldCheckIcon,

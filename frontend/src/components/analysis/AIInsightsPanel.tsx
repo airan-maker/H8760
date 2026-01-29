@@ -45,6 +45,13 @@ export function AIInsightsPanel({ input, result }: AIInsightsPanelProps) {
     checkApi();
   }, []);
 
+  // 자동 분석 시작 - API 사용 가능하고 분석 결과가 없을 때
+  useEffect(() => {
+    if (apiAvailable && hasContext && !interpretation && !interpretLoading && !interpretError) {
+      fetchInterpretation();
+    }
+  }, [apiAvailable, hasContext, interpretation, interpretLoading, interpretError, fetchInterpretation]);
+
   // API 미설정 상태
   if (apiAvailable === false) {
     return (

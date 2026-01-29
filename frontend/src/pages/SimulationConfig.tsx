@@ -240,7 +240,7 @@ export default function SimulationConfig() {
     { id: 'financial', label: '재무' },
     { id: 'tax', label: '세금' },
     { id: 'incentives', label: '인센티브' },
-    { id: 'risk', label: '리스크' },
+    { id: 'risk', label: '분석 설정' },
   ];
 
   const tabIcons = {
@@ -538,21 +538,21 @@ export default function SimulationConfig() {
                 </div>
               </div>
 
-              {/* 리스크 섹션 */}
+              {/* 분석 모드 섹션 */}
               <div className="p-3 bg-gradient-to-br from-amber-50/50 to-transparent rounded-xl">
                 <h4 className="font-semibold text-dark-700 mb-2 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                  리스크
+                  분석 모드
                 </h4>
                 <div className="space-y-2 text-dark-500">
                   <div className="flex justify-between items-center">
-                    <span>신뢰 수준</span>
-                    <span className="font-semibold text-dark-700 bg-white px-2 py-0.5 rounded">{input.riskWeights.confidenceLevel}</span>
+                    <span>분석 유형</span>
+                    <span className="font-semibold text-dark-700 bg-white px-2 py-0.5 rounded">단일 시나리오</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span>시뮬레이션</span>
+                    <span>현금흐름</span>
                     <span className="font-semibold text-dark-700 bg-white px-2 py-0.5 rounded">
-                      {input.monteCarlo.iterations.toLocaleString()}회
+                      {input.financial.projectLifetime}년
                     </span>
                   </div>
                 </div>

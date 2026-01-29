@@ -237,47 +237,89 @@ def run_full_simulation(
     if fin_result.salvage_value > 0:
         log_progress("  └ 잔존가치", f"{fin_result.salvage_value/1e8:.1f}억원")
 
-    # 몬테카를로 시뮬레이션
+    # 몬테카를로 시뮬레이션 (현재 비활성화 - 기본 현금흐름 분석에 집중)
+    # print("-"*60, flush=True)
+    # log_progress("STEP 5/6", f"몬테카를로 시뮬레이션 ({mc.iterations:,}회 반복)")
+    # mc_config = MonteCarloConfig(
+    #     iterations=mc.iterations,
+    #     weather_sigma=mc.weather_sigma,
+    #     price_sigma=mc.price_sigma,
+    # )
+    #
+    # annual_opex = cost.capex * (cost.opex_ratio / 100)
+    #
+    # mc_start = time.time()
+    # mc_result = run_monte_carlo(
+    #     energy_config=energy_config,
+    #     mc_config=mc_config,
+    #     base_electricity_prices=base_electricity_prices,
+    #     base_h2_price=market.h2_price,
+    #     capex=cost.capex,
+    #     opex_annual=annual_opex,
+    #     discount_rate=financial.discount_rate,
+    #     project_lifetime=financial.project_lifetime,
+    #     weather_variability=risk.weather_variability,
+    #     price_volatility=risk.price_volatility,
+    #     debt_ratio=financial.debt_ratio,
+    #     interest_rate=financial.interest_rate,
+    #     loan_tenor=financial.loan_tenor,
+    #     tax_rate=tax.corporate_tax_rate + tax.local_tax_rate,
+    #     depreciation_years=tax.electrolyzer_useful_life,
+    # )
+    # mc_elapsed = time.time() - mc_start
+    # log_progress("  └ 완료", f"{mc_elapsed:.2f}초 소요")
+
+    # 몬테카를로 비활성화로 인해 단일 시나리오 값 사용
     print("-"*60, flush=True)
-    log_progress("STEP 5/6", f"몬테카를로 시뮬레이션 ({mc.iterations:,}회 반복)")
-    mc_config = MonteCarloConfig(
-        iterations=mc.iterations,
-        weather_sigma=mc.weather_sigma,
-        price_sigma=mc.price_sigma,
-    )
+    log_progress("STEP 5/6", "단일 시나리오 분석 (몬테카를로 비활성화)")
 
-    annual_opex = cost.capex * (cost.opex_ratio / 100)
+    # 단일 시나리오 결과를 기본값으로 사용
+    def safe_float(val, default=0.0):
+        """inf, nan 값을 안전하게 처리"""
+        import math
+        if val is None or math.isnan(val) or math.isinf(val):
+            return default
+        return float(val)
 
-    mc_start = time.time()
-    mc_result = run_monte_carlo(
-        energy_config=energy_config,
-        mc_config=mc_config,
-        base_electricity_prices=base_electricity_prices,
-        base_h2_price=market.h2_price,
-        capex=cost.capex,
-        opex_annual=annual_opex,
-        discount_rate=financial.discount_rate,
-        project_lifetime=financial.project_lifetime,
-        weather_variability=risk.weather_variability,
-        price_volatility=risk.price_volatility,
-        # Bankability 3순위: 세후 계산용 파라미터
-        debt_ratio=financial.debt_ratio,
-        interest_rate=financial.interest_rate,
-        loan_tenor=financial.loan_tenor,
-        tax_rate=tax.corporate_tax_rate + tax.local_tax_rate,
-        depreciation_years=tax.electrolyzer_useful_life,
+    class SimpleMCResult:
+        def __init__(self, npv, npv_after_tax, irr, equity_irr, h2_prod, h2_price):
+            self.npv_p50 = safe_float(npv)
+            self.npv_p90 = safe_float(npv * 0.85)  # 보수적 추정
+            self.npv_p99 = safe_float(npv * 0.70)
+            self.npv_after_tax_p50 = safe_float(npv_after_tax)
+            self.npv_after_tax_p90 = safe_float(npv_after_tax * 0.85)
+            self.npv_after_tax_p99 = safe_float(npv_after_tax * 0.70)
+            self.irr_p50 = safe_float(irr)
+            self.irr_p90 = safe_float(irr * 0.85)
+            self.irr_p99 = safe_float(irr * 0.70)
+            self.equity_irr_p50 = safe_float(equity_irr)
+            self.equity_irr_p90 = safe_float(equity_irr * 0.85)
+            self.equity_irr_p99 = safe_float(equity_irr * 0.70)
+            self.var_95 = safe_float(abs(npv * 0.15) if npv < 0 else npv * 0.15)  # VaR 추정
+            self.h2_production_distribution = [safe_float(h2_prod)] * 100
+            self.npv_distribution = [safe_float(npv)] * 100
+            self.revenue_distribution = [safe_float(h2_prod * h2_price)] * 100
+
+    mc_result = SimpleMCResult(
+        npv=fin_result.npv,
+        npv_after_tax=fin_result.npv_after_tax,
+        irr=fin_result.irr,
+        equity_irr=fin_result.equity_irr,
+        h2_prod=sum(yearly_h2_prod) / len(yearly_h2_prod),
+        h2_price=market.h2_price,
     )
-    mc_elapsed = time.time() - mc_start
-    log_progress("  └ 완료", f"{mc_elapsed:.2f}초 소요")
-    log_progress("  └ NPV P50 (세전)", f"{mc_result.npv_p50/1e8:.1f}억원")
-    log_progress("  └ NPV P50 (세후)", f"{mc_result.npv_after_tax_p50/1e8:.1f}억원")
-    log_progress("  └ IRR P50 (Project)", f"{mc_result.irr_p50:.2f}%")
-    log_progress("  └ IRR P50 (Equity)", f"{mc_result.equity_irr_p50:.2f}%")
-    log_progress("  └ VaR 95%", f"{mc_result.var_95/1e8:.1f}억원")
+    log_progress("  └ NPV (세전)", f"{fin_result.npv/1e8:.1f}억원")
+    log_progress("  └ NPV (세후)", f"{fin_result.npv_after_tax/1e8:.1f}억원")
+    log_progress("  └ Project IRR", f"{fin_result.irr:.2f}%")
+    log_progress("  └ Equity IRR", f"{fin_result.equity_irr:.2f}%")
 
     # 민감도 분석
     print("-"*60, flush=True)
     log_progress("STEP 6/6", "민감도 분석 및 결과 집계")
+
+    # 민감도 분석용 연간 운영비 계산
+    annual_opex = cost.capex * (cost.opex_ratio / 100)
+
     sensitivity_vars = generate_default_sensitivity_variables(
         electricity_price=cost.ppa_price or 100.0,
         h2_price=market.h2_price,

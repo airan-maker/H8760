@@ -15,11 +15,8 @@ export default function KPICards({ kpis }: Props) {
     {
       title: 'NPV (세전)',
       value: formatCurrency(kpis.npv.p50, true),
-      subValues: [
-        { label: 'P90', value: formatCurrency(kpis.npv.p90, true) },
-        { label: 'P99', value: formatCurrency(kpis.npv.p99, true) },
-      ],
-      subtitle: 'P50 기준',
+      subValues: [],  // 몬테카를로 비활성화로 P90/P99 숨김
+      subtitle: '순현재가치',
       color: kpis.npv.p50 >= 0 ? 'green' : 'red',
       trend: kpis.npv.p50 >= 0 ? 'up' : 'down',
       icon: (
@@ -36,11 +33,8 @@ export default function KPICards({ kpis }: Props) {
     {
       title: 'Project IRR',
       value: formatPercent(kpis.irr.p50, 1),
-      subValues: [
-        { label: 'P90', value: formatPercent(kpis.irr.p90, 1) },
-        { label: 'P99', value: formatPercent(kpis.irr.p99, 1) },
-      ],
-      subtitle: 'P50 기준',
+      subValues: [],  // 몬테카를로 비활성화로 P90/P99 숨김
+      subtitle: '프로젝트 수익률',
       color: kpis.irr.p50 >= 8 ? 'green' : kpis.irr.p50 >= 5 ? 'yellow' : 'red',
       trend: kpis.irr.p50 >= 8 ? 'up' : 'neutral',
       icon: (
@@ -58,9 +52,7 @@ export default function KPICards({ kpis }: Props) {
     ...(hasEquityIrr ? [{
       title: 'Equity IRR',
       value: formatPercent(kpis.equityIrr.p50, 1),
-      subValues: [
-        { label: 'P90', value: formatPercent(kpis.equityIrr.p90, 1) },
-      ],
+      subValues: [],  // 몬테카를로 비활성화로 P90 숨김
       subtitle: '자기자본 수익률',
       color: kpis.equityIrr.p50 >= 12 ? 'green' : kpis.equityIrr.p50 >= 8 ? 'yellow' : 'red',
       trend: kpis.equityIrr.p50 >= 12 ? 'up' : 'neutral',
@@ -119,11 +111,8 @@ export default function KPICards({ kpis }: Props) {
     {
       title: '연간 생산량',
       value: `${formatNumber(kpis.annualH2Production.p50, 0)} 톤`,
-      subValues: [
-        { label: 'P90', value: `${formatNumber(kpis.annualH2Production.p90, 0)} 톤` },
-        { label: 'P99', value: `${formatNumber(kpis.annualH2Production.p99, 0)} 톤` },
-      ],
-      subtitle: 'P50 기준',
+      subValues: [],  // 몬테카를로 비활성화로 P90/P99 숨김
+      subtitle: '수소 생산량',
       color: 'hydrogen',
       trend: 'up',
       icon: (
@@ -137,24 +126,16 @@ export default function KPICards({ kpis }: Props) {
         </svg>
       ),
     },
-    {
-      title: 'VaR 95%',
-      value: formatCurrency(kpis.var95, true),
-      subValues: [],
-      subtitle: '최대 손실',
-      color: 'purple',
-      trend: 'down',
-      icon: (
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-      ),
-    },
+    // VaR 95% - 몬테카를로 비활성화로 숨김
+    // {
+    //   title: 'VaR 95%',
+    //   value: formatCurrency(kpis.var95, true),
+    //   subValues: [],
+    //   subtitle: '최대 손실',
+    //   color: 'purple',
+    //   trend: 'down',
+    //   icon: (...),
+    // },
     {
       title: 'LCOH',
       value: `${formatNumber(kpis.lcoh, 0)} 원/kg`,

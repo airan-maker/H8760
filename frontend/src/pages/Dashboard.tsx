@@ -686,6 +686,15 @@ export default function Dashboard() {
       </div>
 
       <div className="space-y-8">
+      {/* Bankability 분석 - 최상단 배치 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">Bankability 분석</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <AIInsightsPanel input={currentInput} result={result} />
+      </section>
+
       {/* 자본 구조 요약 (있는 경우에만 표시) */}
       {result.capitalSummary && (
         <section>
@@ -760,7 +769,7 @@ export default function Dashboard() {
         <KPICards kpis={result.kpis} confidenceLevel="P50" />
         {/* KPI 계산 로직 설명 */}
         <div className="mt-4 p-4 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-500">
-          <p className="font-semibold mb-3 text-gray-600">KPI 계산 로직 (financial.py, monte_carlo.py)</p>
+          <p className="font-semibold mb-3 text-gray-600">KPI 계산 로직 (financial.py)</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <p className="font-medium text-gray-600">NPV (순현재가치)</p>
@@ -783,23 +792,137 @@ export default function Dashboard() {
               <p className="font-mono text-[10px] bg-white p-1 rounded mt-1">H₂ = 전력(kW) × 효율 / 비소비량</p>
             </div>
             <div>
-              <p className="font-medium text-gray-600">VaR 95%</p>
-              <p className="font-mono text-[10px] bg-white p-1 rounded mt-1">10,000회 중 5번째 백분위</p>
+              <p className="font-medium text-gray-600">Equity IRR</p>
+              <p className="font-mono text-[10px] bg-white p-1 rounded mt-1">자기자본 기준 NPV=0 되는 r</p>
             </div>
           </div>
-          <p className="text-[10px] mt-3">* 데이터 소스: 백엔드 시뮬레이션 API (energy_8760.py, financial.py, monte_carlo.py)</p>
+          <p className="text-[10px] mt-3">* 데이터 소스: 백엔드 시뮬레이션 API (energy_8760.py, financial.py)</p>
         </div>
         <SectionExplainer section="kpi" context={analysisContext} className="mt-3" />
       </section>
 
-      {/* 차트 그리드 */}
+      {/* 연도별 현금흐름 세부 테이블 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">연도별 현금흐름 상세</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <div className="bg-white rounded-2xl shadow-card border border-dark-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-slate-800 text-white">
+                  <th className="px-3 py-3 text-left font-medium sticky left-0 bg-slate-800 z-10">연도</th>
+                  <th className="px-3 py-3 text-right font-medium">매출</th>
+                  <th className="px-3 py-3 text-right font-medium">운영비</th>
+                  <th className="px-3 py-3 text-right font-medium">EBITDA</th>
+                  <th className="px-3 py-3 text-right font-medium">감가상각</th>
+                  <th className="px-3 py-3 text-right font-medium">EBIT</th>
+                  <th className="px-3 py-3 text-right font-medium">이자비용</th>
+                  <th className="px-3 py-3 text-right font-medium">원금상환</th>
+                  <th className="px-3 py-3 text-right font-medium">법인세</th>
+                  <th className="px-3 py-3 text-right font-medium">순현금흐름</th>
+                  <th className="px-3 py-3 text-right font-medium">누적현금흐름</th>
+                  <th className="px-3 py-3 text-right font-medium">DSCR</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-100">
+                {result.yearlyCashflow.map((cf, idx) => (
+                  <tr key={cf.year} className={idx % 2 === 0 ? 'bg-white' : 'bg-dark-50'}>
+                    <td className="px-3 py-2 font-medium text-dark-700 sticky left-0 bg-inherit">{cf.year}년</td>
+                    <td className="px-3 py-2 text-right text-emerald-600">{(cf.revenue / 100000000).toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right text-rose-500">-{(cf.opex / 100000000).toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right text-dark-700 font-medium">{(cf.ebitda / 100000000).toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right text-dark-400">{(cf.depreciation / 100000000).toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right text-dark-700">{(cf.ebit / 100000000).toFixed(1)}</td>
+                    <td className="px-3 py-2 text-right text-amber-600">-{(cf.interestExpense / 100000000).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right text-amber-600">-{(cf.principalRepayment / 100000000).toFixed(2)}</td>
+                    <td className="px-3 py-2 text-right text-violet-600">-{(cf.tax / 100000000).toFixed(2)}</td>
+                    <td className={`px-3 py-2 text-right font-medium ${cf.netCashflowAfterTax >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {(cf.netCashflowAfterTax / 100000000).toFixed(1)}
+                    </td>
+                    <td className={`px-3 py-2 text-right font-medium ${cf.cumulativeCashflow >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                      {(cf.cumulativeCashflow / 100000000).toFixed(1)}
+                    </td>
+                    <td className={`px-3 py-2 text-right font-medium ${cf.dscr >= 1.3 ? 'text-emerald-600' : cf.dscr >= 1.1 ? 'text-amber-600' : 'text-rose-600'}`}>
+                      {cf.dscr > 0 ? cf.dscr.toFixed(2) : '-'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-100 font-medium">
+                  <td className="px-3 py-3 sticky left-0 bg-slate-100">합계</td>
+                  <td className="px-3 py-3 text-right text-emerald-700">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.revenue, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-rose-600">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.opex, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-dark-700">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebitda, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-dark-400">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.depreciation, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-dark-700">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebit, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-amber-700">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.interestExpense, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-amber-700">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.principalRepayment, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-violet-700">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.tax, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-dark-700">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.netCashflowAfterTax, 0) / 100000000).toFixed(0)}억
+                  </td>
+                  <td className="px-3 py-3 text-right text-dark-400">-</td>
+                  <td className="px-3 py-3 text-right text-dark-400">
+                    평균 {(result.yearlyCashflow.filter(cf => cf.dscr > 0).reduce((sum, cf) => sum + cf.dscr, 0) / result.yearlyCashflow.filter(cf => cf.dscr > 0).length).toFixed(2)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {/* 테이블 범례 */}
+          <div className="px-4 py-3 bg-dark-50 border-t border-dark-100 text-xs text-dark-500">
+            <p className="font-medium mb-2">단위: 억원 (백만원 이하 반올림)</p>
+            <div className="flex flex-wrap gap-x-6 gap-y-1">
+              <span><span className="text-emerald-600 font-medium">매출</span> = 수소 판매수익 + 부산물 수익 + 인센티브</span>
+              <span><span className="text-rose-500 font-medium">운영비</span> = 전력비 + 유지보수비 + 인건비</span>
+              <span><span className="text-dark-700 font-medium">EBITDA</span> = 매출 - 운영비</span>
+              <span><span className="text-dark-700 font-medium">EBIT</span> = EBITDA - 감가상각</span>
+              <span><span className="text-amber-600 font-medium">원리금</span> = 이자비용 + 원금상환</span>
+              <span><span className="text-violet-600 font-medium">법인세</span> = (EBIT - 이자비용) × 세율</span>
+            </div>
+          </div>
+        </div>
+        <SectionExplainer section="cashflow" context={analysisContext} className="mt-3" />
+      </section>
+
+      {/* 현금흐름 차트 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">현금흐름 추이</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
+          <CashflowChart data={result.yearlyCashflow} />
+        </div>
+      </section>
+
+      {/* 몬테카를로 분석 차트 (현재 비활성화) */}
+      {/*
       <section>
         <div className="flex items-center gap-2 mb-4">
           <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">상세 분석</span>
           <span className="flex-1 h-px bg-dark-100"></span>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* NPV 분포 */}
           <div className="flex flex-col">
             <DistributionHistogram
               title="NPV 분포 (몬테카를로)"
@@ -810,26 +933,17 @@ export default function Dashboard() {
             />
             <SectionExplainer section="npv_distribution" context={analysisContext} className="mt-3" />
           </div>
-
-          {/* 리스크 폭포수 */}
           <div className="flex flex-col">
             <WaterfallChart data={result.riskWaterfall} />
             <SectionExplainer section="waterfall" context={analysisContext} className="mt-3" />
           </div>
-
-          {/* 민감도 분석 */}
           <div className="flex flex-col">
             <TornadoChart data={result.sensitivity} baseNpv={result.kpis.npv.p50} />
             <SectionExplainer section="sensitivity" context={analysisContext} className="mt-3" />
           </div>
-
-          {/* 현금흐름 */}
-          <div className="flex flex-col">
-            <CashflowChart data={result.yearlyCashflow} />
-            <SectionExplainer section="cashflow" context={analysisContext} className="mt-3" />
-          </div>
         </div>
       </section>
+      */}
 
       {/* 8760 히트맵 */}
       {result.hourlyData && (
@@ -862,14 +976,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* AI 인사이트 */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">AI 분석</span>
-          <span className="flex-1 h-px bg-dark-100"></span>
-        </div>
-        <AIInsightsPanel input={currentInput} result={result} />
-      </section>
       </div>
 
       {/* 로그인 필요 모달 */}
