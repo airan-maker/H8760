@@ -801,7 +801,7 @@ export default function Dashboard() {
         <SectionExplainer section="kpi" context={analysisContext} className="mt-3" />
       </section>
 
-      {/* 연도별 현금흐름 세부 테이블 */}
+      {/* 연도별 현금흐름 세부 테이블 (Transposed: 항목이 행, 연도가 열) */}
       <section>
         <div className="flex items-center gap-2 mb-4">
           <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">연도별 현금흐름 상세</span>
@@ -812,80 +812,129 @@ export default function Dashboard() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-800 text-white">
-                  <th className="px-3 py-3 text-left font-medium sticky left-0 bg-slate-800 z-10">연도</th>
-                  <th className="px-3 py-3 text-right font-medium">매출</th>
-                  <th className="px-3 py-3 text-right font-medium">운영비</th>
-                  <th className="px-3 py-3 text-right font-medium">EBITDA</th>
-                  <th className="px-3 py-3 text-right font-medium">감가상각</th>
-                  <th className="px-3 py-3 text-right font-medium">EBIT</th>
-                  <th className="px-3 py-3 text-right font-medium">이자비용</th>
-                  <th className="px-3 py-3 text-right font-medium">원금상환</th>
-                  <th className="px-3 py-3 text-right font-medium">법인세</th>
-                  <th className="px-3 py-3 text-right font-medium">순현금흐름</th>
-                  <th className="px-3 py-3 text-right font-medium">누적현금흐름</th>
-                  <th className="px-3 py-3 text-right font-medium">DSCR</th>
+                  <th className="px-3 py-3 text-left font-medium sticky left-0 bg-slate-800 z-10 min-w-[120px]">항목</th>
+                  {result.yearlyCashflow.map((cf) => (
+                    <th key={cf.year} className="px-2 py-3 text-right font-medium min-w-[60px]">{cf.year}년</th>
+                  ))}
+                  <th className="px-3 py-3 text-right font-medium bg-slate-700 min-w-[80px]">합계</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-dark-100">
-                {result.yearlyCashflow.map((cf, idx) => (
-                  <tr key={cf.year} className={idx % 2 === 0 ? 'bg-white' : 'bg-dark-50'}>
-                    <td className="px-3 py-2 font-medium text-dark-700 sticky left-0 bg-inherit">{cf.year}년</td>
-                    <td className="px-3 py-2 text-right text-emerald-600">{(cf.revenue / 100000000).toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right text-rose-500">-{(cf.opex / 100000000).toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right text-dark-700 font-medium">{(cf.ebitda / 100000000).toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right text-dark-400">{(cf.depreciation / 100000000).toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right text-dark-700">{(cf.ebit / 100000000).toFixed(1)}</td>
-                    <td className="px-3 py-2 text-right text-amber-600">-{(cf.interestExpense / 100000000).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-amber-600">-{(cf.principalRepayment / 100000000).toFixed(2)}</td>
-                    <td className="px-3 py-2 text-right text-violet-600">-{(cf.tax / 100000000).toFixed(2)}</td>
-                    <td className={`px-3 py-2 text-right font-medium ${cf.netCashflowAfterTax >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {(cf.netCashflowAfterTax / 100000000).toFixed(1)}
-                    </td>
-                    <td className={`px-3 py-2 text-right font-medium ${cf.cumulativeCashflow >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
-                      {(cf.cumulativeCashflow / 100000000).toFixed(1)}
-                    </td>
-                    <td className={`px-3 py-2 text-right font-medium ${cf.dscr >= 1.3 ? 'text-emerald-600' : cf.dscr >= 1.1 ? 'text-amber-600' : 'text-rose-600'}`}>
-                      {cf.dscr > 0 ? cf.dscr.toFixed(2) : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-slate-100 font-medium">
-                  <td className="px-3 py-3 sticky left-0 bg-slate-100">합계</td>
-                  <td className="px-3 py-3 text-right text-emerald-700">
-                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.revenue, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-rose-600">
-                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.opex, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-dark-700">
-                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebitda, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-dark-400">
-                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.depreciation, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-dark-700">
-                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebit, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-amber-700">
-                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.interestExpense, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-amber-700">
-                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.principalRepayment, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-violet-700">
-                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.tax, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-dark-700">
-                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.netCashflowAfterTax, 0) / 100000000).toFixed(0)}억
-                  </td>
-                  <td className="px-3 py-3 text-right text-dark-400">-</td>
-                  <td className="px-3 py-3 text-right text-dark-400">
-                    평균 {(result.yearlyCashflow.filter(cf => cf.dscr > 0).reduce((sum, cf) => sum + cf.dscr, 0) / result.yearlyCashflow.filter(cf => cf.dscr > 0).length).toFixed(2)}
+                {/* 매출 */}
+                <tr className="bg-white">
+                  <td className="px-3 py-2 font-medium text-emerald-700 sticky left-0 bg-white">매출</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-emerald-600">{(cf.revenue / 100000000).toFixed(1)}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-emerald-700 bg-emerald-50">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.revenue, 0) / 100000000).toFixed(0)}
                   </td>
                 </tr>
-              </tfoot>
+                {/* 운영비 */}
+                <tr className="bg-dark-50">
+                  <td className="px-3 py-2 font-medium text-rose-600 sticky left-0 bg-dark-50">운영비</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-rose-500">-{(cf.opex / 100000000).toFixed(1)}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-rose-600 bg-rose-50">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.opex, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* EBITDA */}
+                <tr className="bg-white">
+                  <td className="px-3 py-2 font-medium text-dark-700 sticky left-0 bg-white">EBITDA</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-dark-700 font-medium">{(cf.ebitda / 100000000).toFixed(1)}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-dark-800 bg-slate-100">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebitda, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 감가상각 */}
+                <tr className="bg-dark-50">
+                  <td className="px-3 py-2 font-medium text-dark-500 sticky left-0 bg-dark-50">감가상각</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-dark-400">{(cf.depreciation / 100000000).toFixed(1)}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-dark-500 bg-slate-100">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.depreciation, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* EBIT */}
+                <tr className="bg-white">
+                  <td className="px-3 py-2 font-medium text-dark-700 sticky left-0 bg-white">EBIT</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-dark-700">{(cf.ebit / 100000000).toFixed(1)}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-dark-800 bg-slate-100">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.ebit, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 이자비용 */}
+                <tr className="bg-dark-50">
+                  <td className="px-3 py-2 font-medium text-amber-700 sticky left-0 bg-dark-50">이자비용</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-amber-600">{cf.interestExpense > 0 ? `-${(cf.interestExpense / 100000000).toFixed(1)}` : '-'}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-amber-700 bg-amber-50">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.interestExpense, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 원금상환 */}
+                <tr className="bg-white">
+                  <td className="px-3 py-2 font-medium text-amber-700 sticky left-0 bg-white">원금상환</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-amber-600">{cf.principalRepayment > 0 ? `-${(cf.principalRepayment / 100000000).toFixed(1)}` : '-'}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-amber-700 bg-amber-50">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.principalRepayment, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 법인세 */}
+                <tr className="bg-dark-50">
+                  <td className="px-3 py-2 font-medium text-violet-700 sticky left-0 bg-dark-50">법인세</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className="px-2 py-2 text-right text-violet-600">{cf.tax > 0 ? `-${(cf.tax / 100000000).toFixed(1)}` : '-'}</td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-violet-700 bg-violet-50">
+                    -{(result.yearlyCashflow.reduce((sum, cf) => sum + cf.tax, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 순현금흐름 (세후) */}
+                <tr className="bg-primary-50/50 border-t-2 border-primary-200">
+                  <td className="px-3 py-2 font-bold text-primary-800 sticky left-0 bg-primary-50/50">순현금흐름</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className={`px-2 py-2 text-right font-bold ${cf.netCashflowAfterTax >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      {(cf.netCashflowAfterTax / 100000000).toFixed(1)}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-primary-800 bg-primary-100">
+                    {(result.yearlyCashflow.reduce((sum, cf) => sum + cf.netCashflowAfterTax, 0) / 100000000).toFixed(0)}
+                  </td>
+                </tr>
+                {/* 누적현금흐름 */}
+                <tr className="bg-blue-50/50">
+                  <td className="px-3 py-2 font-bold text-blue-800 sticky left-0 bg-blue-50/50">누적현금흐름</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className={`px-2 py-2 text-right font-bold ${cf.cumulativeCashflow >= 0 ? 'text-blue-600' : 'text-rose-600'}`}>
+                      {(cf.cumulativeCashflow / 100000000).toFixed(1)}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-blue-800 bg-blue-100">-</td>
+                </tr>
+                {/* DSCR */}
+                <tr className="bg-white border-t-2 border-dark-200">
+                  <td className="px-3 py-2 font-medium text-dark-700 sticky left-0 bg-white">DSCR</td>
+                  {result.yearlyCashflow.map((cf) => (
+                    <td key={cf.year} className={`px-2 py-2 text-right font-medium ${cf.dscr >= 1.3 ? 'text-emerald-600' : cf.dscr >= 1.1 ? 'text-amber-600' : cf.dscr > 0 ? 'text-rose-600' : 'text-dark-300'}`}>
+                      {cf.dscr > 0 ? cf.dscr.toFixed(2) : '-'}
+                    </td>
+                  ))}
+                  <td className="px-3 py-2 text-right font-bold text-dark-600 bg-slate-100">
+                    평균 {(result.yearlyCashflow.filter(cf => cf.dscr > 0).reduce((sum, cf) => sum + cf.dscr, 0) / Math.max(result.yearlyCashflow.filter(cf => cf.dscr > 0).length, 1)).toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
             </table>
           </div>
           {/* 테이블 범례 */}
