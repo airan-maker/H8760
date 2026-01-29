@@ -96,6 +96,7 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showDetails, setShowDetails] = useState(false);
+  const [applyCapex, setApplyCapex] = useState(false); // CAPEX 적용 여부 (기본: 사용자 값 유지)
 
   useEffect(() => {
     const loadPresets = async () => {
@@ -123,16 +124,25 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
     // 전해조 용량 기반 CAPEX 계산 (용량 × 단가 × 국가 계수)
     const capacityKw = currentInput.equipment.electrolyzerCapacity * 1000; // MW → kW
     const baseCapex = capacityKw * BASE_CAPEX_PER_KW;
-    const adjustedCapex = baseCapex * preset.capexMultiplier;
-    const adjustedStackCost = adjustedCapex * STACK_COST_RATIO;
+    const suggestedCapex = baseCapex * preset.capexMultiplier;
+    const suggestedStackCost = suggestedCapex * STACK_COST_RATIO;
+
+    // CAPEX 적용 여부에 따라 다르게 처리
+    const costConfig = applyCapex
+      ? {
+          ...currentInput.cost,
+          capex: suggestedCapex,
+          stackReplacementCost: suggestedStackCost,
+          ppaPrice: preset.ppaPriceKrw,
+        }
+      : {
+          ...currentInput.cost,
+          // CAPEX는 사용자 값 유지, 전력 가격만 적용
+          ppaPrice: preset.ppaPriceKrw,
+        };
 
     onApply({
-      cost: {
-        ...currentInput.cost,
-        capex: adjustedCapex,
-        stackReplacementCost: adjustedStackCost,
-        ppaPrice: preset.ppaPriceKrw,
-      },
+      cost: costConfig,
       market: {
         ...currentInput.market,
         h2Price: preset.h2PriceKrw,
@@ -375,10 +385,32 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
               </div>
             )}
 
+            {/* CAPEX 적용 옵션 */}
+            <div className="mt-4 p-3 bg-white rounded-lg border border-dark-200">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={applyCapex}
+                  onChange={(e) => setApplyCapex(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 text-hydrogen-600 rounded border-dark-300 focus:ring-hydrogen-500"
+                />
+                <div className="flex-1">
+                  <div className="text-sm font-medium text-dark-700">CAPEX도 함께 적용</div>
+                  <p className="text-xs text-dark-400 mt-0.5">
+                    {applyCapex ? (
+                      <>권장 CAPEX 적용: {currentInput.equipment.electrolyzerCapacity}MW × {(BASE_CAPEX_PER_KW / 10000).toFixed(0)}만원/kW × {selectedPreset.capexMultiplier.toFixed(2)} = <span className="font-medium text-hydrogen-600">{((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원</span></>
+                    ) : (
+                      <>현재 CAPEX 유지: <span className="font-medium">{(currentInput.cost.capex / 100000000).toFixed(0)}억원</span> (프로젝트별 상이할 수 있음)</>
+                    )}
+                  </p>
+                </div>
+              </label>
+            </div>
+
             {/* 적용 버튼 */}
             <button
               onClick={handleApply}
-              className="mt-4 w-full py-2.5 bg-hydrogen-500 text-white rounded-lg hover:bg-hydrogen-600 transition-colors font-medium flex items-center justify-center gap-2"
+              className="mt-3 w-full py-2.5 bg-hydrogen-500 text-white rounded-lg hover:bg-hydrogen-600 transition-colors font-medium flex items-center justify-center gap-2"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -386,23 +418,36 @@ export default function CountryPresetSelector({ currentInput, onApply }: Props) 
               {selectedPreset.name} 조건 적용
             </button>
             <p className="text-xs text-dark-400 text-center mt-2">
-              * {currentInput.equipment.electrolyzerCapacity}MW × {(BASE_CAPEX_PER_KW / 10000).toFixed(0)}만원/kW × {selectedPreset.capexMultiplier.toFixed(2)} = {((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원
+              {applyCapex
+                ? '전력비, 수소가격, 인센티브, 세금, CAPEX 모두 적용'
+                : '전력비, 수소가격, 인센티브, 세금 적용 (CAPEX 제외)'}
             </p>
           </div>
         )}
 
         {/* 간략 모드에서 적용 버튼 */}
         {selectedPreset && !showDetails && (
-          <div className="mt-3">
+          <div className="mt-3 space-y-2">
+            {/* CAPEX 적용 토글 */}
+            <label className="flex items-center gap-2 text-xs cursor-pointer p-2 bg-dark-50 rounded-lg">
+              <input
+                type="checkbox"
+                checked={applyCapex}
+                onChange={(e) => setApplyCapex(e.target.checked)}
+                className="h-3.5 w-3.5 text-hydrogen-600 rounded border-dark-300 focus:ring-hydrogen-500"
+              />
+              <span className="text-dark-600">
+                CAPEX 적용 ({applyCapex
+                  ? `${((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원`
+                  : `현재값 ${(currentInput.cost.capex / 100000000).toFixed(0)}억원 유지`})
+              </span>
+            </label>
             <button
               onClick={handleApply}
               className="w-full py-2 bg-hydrogen-500 text-white rounded-lg hover:bg-hydrogen-600 transition-colors text-sm font-medium"
             >
               {selectedPreset.flagEmoji} {selectedPreset.name} 조건 적용
             </button>
-            <p className="text-xs text-dark-400 text-center mt-1">
-              CAPEX: {((currentInput.equipment.electrolyzerCapacity * 1000 * BASE_CAPEX_PER_KW * selectedPreset.capexMultiplier) / 100000000).toFixed(0)}억원 ({currentInput.equipment.electrolyzerCapacity}MW 기준)
-            </p>
           </div>
         )}
       </div>
