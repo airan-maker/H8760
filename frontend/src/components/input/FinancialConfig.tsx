@@ -36,7 +36,7 @@ export default function FinancialConfig({ config, onChange }: Props) {
           max={30}
           step={1}
           unit="년"
-          helpText="프로젝트 분석 기간"
+          helpText="건설 + 운영 기간 합계"
         />
 
         <Slider
@@ -44,10 +44,10 @@ export default function FinancialConfig({ config, onChange }: Props) {
           value={config.constructionPeriod}
           onChange={(v) => update('constructionPeriod', v)}
           min={0}
-          max={3}
+          max={5}
           step={1}
           unit="년"
-          helpText="CAPEX 투입 및 건설 소요 기간"
+          helpText={`건설 중 매출 없음 (운영 기간: ${config.projectLifetime - config.constructionPeriod}년)`}
         />
 
         <div className="border-t border-gray-200 pt-4">

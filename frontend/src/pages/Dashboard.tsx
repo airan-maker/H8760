@@ -694,6 +694,32 @@ export default function Dashboard() {
             <span className="flex-1 h-px bg-dark-100"></span>
           </div>
           <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
+            {/* 프로젝트 타임라인 */}
+            <div className="mb-4 p-3 bg-dark-50 rounded-xl">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-dark-400">프로젝트 타임라인</span>
+                <span className="text-sm font-medium text-dark-700">총 {input.financial.projectLifetime}년</span>
+              </div>
+              <div className="flex h-6 rounded-lg overflow-hidden">
+                {input.financial.constructionPeriod > 0 && (
+                  <div
+                    className="bg-amber-400 flex items-center justify-center text-xs font-medium text-amber-900"
+                    style={{ width: `${(input.financial.constructionPeriod / input.financial.projectLifetime) * 100}%` }}
+                  >
+                    {input.financial.constructionPeriod > 1 ? `건설 ${input.financial.constructionPeriod}년` : '건설'}
+                  </div>
+                )}
+                <div
+                  className="bg-hydrogen-400 flex items-center justify-center text-xs font-medium text-hydrogen-900"
+                  style={{ width: `${((input.financial.projectLifetime - input.financial.constructionPeriod) / input.financial.projectLifetime) * 100}%` }}
+                >
+                  운영 {input.financial.projectLifetime - input.financial.constructionPeriod}년
+                </div>
+              </div>
+              {input.financial.constructionPeriod > 0 && (
+                <p className="text-xs text-dark-400 mt-2">* 건설 기간 중에는 매출이 발생하지 않습니다</p>
+              )}
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
               <div className="text-center p-3 bg-dark-50 rounded-xl">
                 <div className="text-xs text-dark-400 mb-1">기본 CAPEX</div>

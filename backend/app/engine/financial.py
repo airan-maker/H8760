@@ -889,14 +889,20 @@ def run_financial_analysis(
         config.repayment_method,
     )
 
-    # 감가상각 계산 (원래 CAPEX 기준, IDC 제외)
+    # 운영 기간 계산 (감가상각은 운영 시작 후부터)
+    operating_period_for_depreciation = config.project_lifetime - config.construction_period
+
+    # 감가상각 계산 (원래 CAPEX 기준, IDC 제외, 운영 기간 기준)
     depreciation_schedule = calculate_depreciation(
         config.capex,
         tax_config,
-        config.project_lifetime,
+        operating_period_for_depreciation,  # 운영 기간만
     )
 
-    # 스택 교체 연도 결정 (운전 시간 기반)
+    # 운영 기간 계산 (건설 기간 제외)
+    operating_period = config.project_lifetime - config.construction_period
+
+    # 스택 교체 연도 결정 (운전 시간 기반, 운영 연도 기준)
     if stack_replacement_years is None:
         if actual_operating_hours_per_year is not None:
             annual_hours = actual_operating_hours_per_year
@@ -907,7 +913,8 @@ def run_financial_analysis(
             years_per_stack = config.stack_lifetime_hours / annual_hours
             stack_replacement_years = []
             cumulative_years = years_per_stack
-            while cumulative_years < config.project_lifetime:
+            # 운영 기간 내에서만 스택 교체 발생 (운영 연차 기준)
+            while cumulative_years < operating_period:
                 stack_replacement_years.append(int(cumulative_years))
                 cumulative_years += years_per_stack
         else:
@@ -928,54 +935,75 @@ def run_financial_analysis(
     cumulative = -initial_equity_investment
     dscr_values = []
 
-    for year in range(1, config.project_lifetime + 1):
-        idx = year - 1
+    # 건설 기간 계산 (건설 기간 동안은 매출 없음)
+    construction_period = config.construction_period
+    operating_years = config.project_lifetime - construction_period  # 실제 운영 기간
 
-        revenue = yearly_revenues[idx] if idx < len(yearly_revenues) else 0
-        elec_cost = (
-            yearly_electricity_costs[idx]
-            if idx < len(yearly_electricity_costs)
-            else 0
-        )
-        h2_production = yearly_h2_production[idx] if idx < len(yearly_h2_production) else 0
+    for year in range(1, config.project_lifetime + 1):
+        # === 건설 기간 vs 운영 기간 구분 ===
+        is_construction = year <= construction_period
+        operating_year = year - construction_period  # 운영 연차 (1부터 시작)
+
+        if is_construction:
+            # 건설 기간: 매출 없음, CAPEX 투입, 이자만 발생 (거치기간)
+            revenue = 0
+            elec_cost = 0
+            h2_production = 0
+        else:
+            # 운영 기간: 정상 운영
+            # yearly_revenues 등은 운영 연도 기준 (0번 인덱스 = 운영 1년차)
+            op_idx = operating_year - 1
+            revenue = yearly_revenues[op_idx] if op_idx < len(yearly_revenues) else 0
+            elec_cost = (
+                yearly_electricity_costs[op_idx]
+                if op_idx < len(yearly_electricity_costs)
+                else 0
+            )
+            h2_production = yearly_h2_production[op_idx] if op_idx < len(yearly_h2_production) else 0
 
         # === 3순위: 생산 기반 인센티브 계산 ===
-        # 운영 보조금 (적용기간 내)
+        # 운영 보조금 (운영 시작 후부터 적용기간 내)
         operating_subsidy = 0.0
-        if incentives.operating_subsidy > 0 and year <= incentives.operating_subsidy_duration:
+        if not is_construction and incentives.operating_subsidy > 0 and operating_year <= incentives.operating_subsidy_duration:
             operating_subsidy = h2_production * incentives.operating_subsidy
 
         # 탄소배출권 수익
         carbon_credit_revenue = 0.0
-        if incentives.carbon_credit_enabled:
+        if not is_construction and incentives.carbon_credit_enabled:
             carbon_credit_revenue = h2_production * incentives.carbon_credit_price
 
         # 청정수소 프리미엄
         clean_h2_premium_revenue = 0.0
-        if incentives.clean_h2_certification_enabled:
+        if not is_construction and incentives.clean_h2_certification_enabled:
             clean_h2_premium_revenue = h2_production * incentives.clean_h2_premium
 
         # 인센티브로 인한 추가 수익
         incentive_revenue = operating_subsidy + carbon_credit_revenue + clean_h2_premium_revenue
         total_revenue = revenue + incentive_revenue
 
-        # 스택 교체 비용
-        stack_cost = (
-            config.stack_replacement_cost
-            if year in stack_replacement_years
-            else 0
-        )
+        # 스택 교체 비용 (운영 기간에만 발생, 운영 연차 기준)
+        stack_cost = 0
+        if not is_construction and operating_year in stack_replacement_years:
+            stack_cost = config.stack_replacement_cost
 
-        # 감가상각비
-        depreciation = depreciation_schedule[idx] if idx < len(depreciation_schedule) else 0
+        # 감가상각비 (건설 완료 후부터 시작)
+        depreciation = 0
+        if not is_construction:
+            dep_idx = operating_year - 1
+            depreciation = depreciation_schedule[dep_idx] if dep_idx < len(depreciation_schedule) else 0
 
-        # 부채 관련
+        # 부채 관련 (프로젝트 연도 기준 - 건설 기간 포함)
+        idx = year - 1
         ds = debt_service_total[idx] if idx < len(debt_service_total) else 0
         interest = interest_payments[idx] if idx < len(interest_payments) else 0
         principal = principal_payments[idx] if idx < len(principal_payments) else 0
 
         # EBITDA 계산 (인센티브 수익 포함)
-        total_opex = annual_opex + elec_cost + stack_cost
+        # 건설 기간: OPEX 없음 (설비 미가동)
+        if is_construction:
+            total_opex = 0
+        else:
+            total_opex = annual_opex + elec_cost + stack_cost
         ebitda = total_revenue - total_opex
 
         # EBIT 계산 (영업이익)
@@ -985,13 +1013,13 @@ def run_financial_analysis(
         ebt = ebit - interest
 
         # === 3순위: 세액공제 계산 ===
-        # 생산세액공제 (PTC) - 적용기간 내
+        # 생산세액공제 (PTC) - 운영 시작 후부터 적용기간 내
         ptc_credit = 0.0
-        if incentives.ptc_enabled and year <= incentives.ptc_duration:
+        if not is_construction and incentives.ptc_enabled and operating_year <= incentives.ptc_duration:
             ptc_credit = h2_production * incentives.ptc_amount
 
-        # 투자세액공제 (ITC) - 1년차에만 적용
-        itc_credit = itc_amount if year == 1 else 0
+        # 투자세액공제 (ITC) - 건설 완료 직후 1년차에 적용
+        itc_credit = itc_amount if (year == construction_period + 1) else 0
 
         # 법인세 계산 (세액공제 적용)
         gross_tax = calculate_corporate_tax(ebt, tax_config) if ebt > 0 else 0
@@ -1025,9 +1053,9 @@ def run_financial_analysis(
         cashflows_after_tax.append(net_cf_after_tax)
         cumulative += net_cf_before_tax
 
-        # DSCR 계산 (EBITDA / Debt Service)
+        # DSCR 계산 (EBITDA / Debt Service) - 운영 기간에만 유의미
         dscr = ebitda / ds if ds > 0 else float("inf")
-        if ds > 0:
+        if ds > 0 and not is_construction:
             dscr_values.append(dscr)
 
         yearly_cashflows.append(

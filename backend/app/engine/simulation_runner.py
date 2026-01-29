@@ -91,6 +91,8 @@ def run_full_simulation(
     log_progress("입력 설정 로드", "CAPEX", f"{cost.capex/1e8:.1f}억원")
     log_progress("입력 설정 로드", "수소 판매가", f"{market.h2_price:,}원/kg")
     log_progress("입력 설정 로드", "프로젝트 기간", f"{financial.project_lifetime}년")
+    log_progress("입력 설정 로드", "건설 기간", f"{financial.construction_period}년")
+    log_progress("입력 설정 로드", "운영 기간", f"{financial.project_lifetime - financial.construction_period}년")
 
     # 전력 가격 생성 (8760개)
     print("-"*60, flush=True)
@@ -141,14 +143,16 @@ def run_full_simulation(
     )
     log_progress("  └ 완료", f"연간 수소생산 {np.sum(base_result.h2_production)/1000:.1f}톤, 가동시간 {np.sum(base_result.operating_hours):,}시간")
 
-    # 다년간 결과 집계
+    # 다년간 결과 집계 (운영 기간만)
+    # 건설 기간에는 매출이 발생하지 않으므로 운영 기간만 계산
+    operating_years = financial.project_lifetime - financial.construction_period
     print("-"*60, flush=True)
-    log_progress("STEP 3/6", f"다년간 현금흐름 계산 ({financial.project_lifetime}년)")
+    log_progress("STEP 3/6", f"다년간 현금흐름 계산 (건설 {financial.construction_period}년 + 운영 {operating_years}년)")
     yearly_data = aggregate_yearly_results(
         config=energy_config,
         electricity_prices=base_electricity_prices,
         h2_price=market.h2_price,
-        project_lifetime=financial.project_lifetime,
+        project_lifetime=operating_years,  # 운영 기간만
         h2_price_escalation=market.h2_price_escalation,
     )
 
