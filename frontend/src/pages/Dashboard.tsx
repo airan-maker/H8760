@@ -709,33 +709,33 @@ export default function Dashboard() {
                 <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.totalCapex / 100000000).toFixed(0)}억</div>
               </div>
               {result.capitalSummary.idcAmount > 0 && (
-                <div className="text-center p-3 bg-amber-50 rounded-xl">
-                  <div className="text-xs text-amber-600 mb-1">IDC (건설이자)</div>
-                  <div className="text-lg font-bold text-amber-700">+{(result.capitalSummary.idcAmount / 100000000).toFixed(1)}억</div>
+                <div className="text-center p-3 bg-dark-50 rounded-xl">
+                  <div className="text-xs text-dark-400 mb-1">IDC (건설이자)</div>
+                  <div className="text-lg font-bold text-dark-700">+{(result.capitalSummary.idcAmount / 100000000).toFixed(1)}억</div>
                 </div>
               )}
-              <div className="text-center p-3 bg-primary-50 rounded-xl">
-                <div className="text-xs text-primary-600 mb-1">총 투자비</div>
-                <div className="text-lg font-bold text-primary-700">{(result.capitalSummary.totalCapexWithIdc / 100000000).toFixed(0)}억</div>
+              <div className="text-center p-3 bg-dark-50 rounded-xl">
+                <div className="text-xs text-dark-400 mb-1">총 투자비</div>
+                <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.totalCapexWithIdc / 100000000).toFixed(0)}억</div>
               </div>
-              <div className="text-center p-3 bg-rose-50 rounded-xl">
-                <div className="text-xs text-rose-600 mb-1">부채</div>
-                <div className="text-lg font-bold text-rose-700">{(result.capitalSummary.debtAmount / 100000000).toFixed(0)}억</div>
+              <div className="text-center p-3 bg-dark-50 rounded-xl">
+                <div className="text-xs text-dark-400 mb-1">부채</div>
+                <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.debtAmount / 100000000).toFixed(0)}억</div>
               </div>
-              <div className="text-center p-3 bg-emerald-50 rounded-xl">
-                <div className="text-xs text-emerald-600 mb-1">자기자본</div>
-                <div className="text-lg font-bold text-emerald-700">{(result.capitalSummary.equityAmount / 100000000).toFixed(0)}억</div>
+              <div className="text-center p-3 bg-dark-50 rounded-xl">
+                <div className="text-xs text-dark-400 mb-1">자기자본</div>
+                <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.equityAmount / 100000000).toFixed(0)}억</div>
               </div>
               {result.capitalSummary.workingCapital > 0 && (
-                <div className="text-center p-3 bg-blue-50 rounded-xl">
-                  <div className="text-xs text-blue-600 mb-1">운전자본</div>
-                  <div className="text-lg font-bold text-blue-700">{(result.capitalSummary.workingCapital / 100000000).toFixed(1)}억</div>
+                <div className="text-center p-3 bg-dark-50 rounded-xl">
+                  <div className="text-xs text-dark-400 mb-1">운전자본</div>
+                  <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.workingCapital / 100000000).toFixed(1)}억</div>
                 </div>
               )}
               {result.capitalSummary.salvageValue > 0 && (
-                <div className="text-center p-3 bg-violet-50 rounded-xl">
-                  <div className="text-xs text-violet-600 mb-1">잔존가치</div>
-                  <div className="text-lg font-bold text-violet-700">{(result.capitalSummary.salvageValue / 100000000).toFixed(0)}억</div>
+                <div className="text-center p-3 bg-dark-50 rounded-xl">
+                  <div className="text-xs text-dark-400 mb-1">잔존가치</div>
+                  <div className="text-lg font-bold text-dark-700">{(result.capitalSummary.salvageValue / 100000000).toFixed(0)}억</div>
                 </div>
               )}
             </div>
@@ -747,11 +747,11 @@ export default function Dashboard() {
               </div>
               <div className="h-3 rounded-full overflow-hidden flex bg-dark-100">
                 <div
-                  className="bg-emerald-500 transition-all duration-300"
+                  className="bg-dark-400 transition-all duration-300"
                   style={{ width: `${(result.capitalSummary.equityAmount / result.capitalSummary.totalCapexWithIdc) * 100}%` }}
                 />
                 <div
-                  className="bg-rose-400 transition-all duration-300"
+                  className="bg-dark-300 transition-all duration-300"
                   style={{ width: `${(result.capitalSummary.debtAmount / result.capitalSummary.totalCapexWithIdc) * 100}%` }}
                 />
               </div>
