@@ -28,10 +28,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS 설정
+# CORS 설정 (Railway 배포 지원)
+# CORS_ALLOW_ALL이 True면 모든 origin 허용, 아니면 설정된 origins만 허용
+cors_origins = ["*"] if settings.CORS_ALLOW_ALL else settings.CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

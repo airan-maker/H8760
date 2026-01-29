@@ -12,8 +12,16 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api"
     PROJECT_NAME: str = "Hydrogen Platform"
 
-    # CORS 설정
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    # CORS 설정 (Railway 배포 및 로컬 개발 환경 지원)
+    # 환경변수로 CORS_ORIGINS를 설정하거나, 기본값 사용
+    # Railway에서는 CORS_ORIGINS 환경변수에 프론트엔드 URL 설정 필요
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+    ]
+
+    # Railway 배포 시 모든 origin 허용 (프로덕션에서는 구체적인 URL 설정 권장)
+    CORS_ALLOW_ALL: bool = True
 
     # 데이터베이스 설정
     DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/hydrogen"

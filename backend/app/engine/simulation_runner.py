@@ -406,6 +406,17 @@ def run_full_simulation(
     debt_amount = fin_result.total_capex_with_idc * (financial.debt_ratio / 100)
     equity_amount = fin_result.total_capex_with_idc - debt_amount
 
+    # inf/nan 값을 안전하게 처리하는 헬퍼 (DSCR, LLCR, PLCR 등에서 무한대 발생 가능)
+    def safe_json_float(val, default=0.0, max_val=9999.99):
+        """JSON 직렬화를 위해 inf/nan 값을 안전하게 처리"""
+        import math
+        if val is None or math.isnan(val) or math.isinf(val):
+            return default
+        # 매우 큰 값도 제한 (JSON에서 문제 발생 가능)
+        if val > max_val:
+            return max_val
+        return float(val)
+
     # 결과 조합
     return SimulationResult(
         simulation_id=simulation_id,
@@ -430,15 +441,18 @@ def run_full_simulation(
                 p90=mc_result.irr_p90,
                 p99=mc_result.irr_p99,
             ),
-            dscr=DSCRMetrics(min=fin_result.dscr_min, avg=fin_result.dscr_avg),
-            payback_period=fin_result.payback_period,
+            dscr=DSCRMetrics(
+                min=safe_json_float(fin_result.dscr_min),
+                avg=safe_json_float(fin_result.dscr_avg),
+            ),
+            payback_period=safe_json_float(fin_result.payback_period, default=financial.project_lifetime),
             var_95=mc_result.var_95,
             annual_h2_production=PercentileValue(
                 p50=float(np.percentile(mc_result.h2_production_distribution, 50)),
                 p90=float(np.percentile(mc_result.h2_production_distribution, 10)),
                 p99=float(np.percentile(mc_result.h2_production_distribution, 1)),
             ),
-            lcoh=fin_result.lcoh,
+            lcoh=safe_json_float(fin_result.lcoh),
             # Bankability 추가 지표 (3순위: 몬테카를로 세후 분포 적용)
             npv_after_tax=PercentileValue(
                 p50=mc_result.npv_after_tax_p50,
@@ -451,8 +465,8 @@ def run_full_simulation(
                 p99=mc_result.equity_irr_p99,
             ),
             coverage_ratios=LLCRMetrics(
-                llcr=fin_result.llcr,
-                plcr=fin_result.plcr,
+                llcr=safe_json_float(fin_result.llcr),
+                plcr=safe_json_float(fin_result.plcr),
             ),
         ),
         hourly_data=HourlyData(
@@ -468,16 +482,16 @@ def run_full_simulation(
         sensitivity=[
             SensitivityItem(
                 variable=s.variable,
-                base_case=s.base_case,
-                low_case=s.low_case,
-                high_case=s.high_case,
-                low_change_pct=s.low_change_pct,
-                high_change_pct=s.high_change_pct,
+                base_case=safe_json_float(s.base_case),
+                low_case=safe_json_float(s.low_case),
+                high_case=safe_json_float(s.high_case),
+                low_change_pct=safe_json_float(s.low_change_pct),
+                high_change_pct=safe_json_float(s.high_change_pct),
             )
             for s in sensitivity_results
         ],
         risk_waterfall=[
-            RiskWaterfallItem(factor=w["factor"], impact=w.get("cumulative", w["impact"]))
+            RiskWaterfallItem(factor=w["factor"], impact=safe_json_float(w.get("cumulative", w["impact"])))
             for w in waterfall
         ],
         yearly_cashflow=[
@@ -495,7 +509,7 @@ def run_full_simulation(
                 net_cashflow=cf.net_cashflow,
                 net_cashflow_after_tax=cf.net_cashflow_after_tax,
                 cumulative_cashflow=cf.cumulative_cashflow,
-                dscr=cf.dscr,
+                dscr=safe_json_float(cf.dscr),
             )
             for cf in fin_result.yearly_cashflows
         ],
