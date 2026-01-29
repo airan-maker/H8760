@@ -1,7 +1,7 @@
 /**
  * AI 인사이트 패널 - 메인 컴포넌트
  */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { SimulationInput, SimulationResult } from '../../types';
 import { useAIAnalysis } from '../../hooks/useAIAnalysis';
 import { InterpretationCard } from './InterpretationCard';
@@ -18,7 +18,6 @@ type TabType = 'insights' | 'chat';
 export function AIInsightsPanel({ input, result }: AIInsightsPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('insights');
   const [apiAvailable, setApiAvailable] = useState<boolean | null>(null);
-  const analysisTriggeredRef = useRef(false);
 
   const {
     hasContext,
@@ -45,23 +44,6 @@ export function AIInsightsPanel({ input, result }: AIInsightsPanelProps) {
     };
     checkApi();
   }, []);
-
-  // 자동 분석 시작 - API 사용 가능하고 분석 결과가 없을 때 (1회만 실행)
-  useEffect(() => {
-    // 이미 트리거되었거나, 조건이 맞지 않으면 스킵
-    if (analysisTriggeredRef.current) return;
-    if (!apiAvailable || !hasContext) return;
-    if (interpretation || interpretLoading || interpretError) return;
-
-    // 분석 시작
-    analysisTriggeredRef.current = true;
-    fetchInterpretation();
-  }, [apiAvailable, hasContext, interpretation, interpretLoading, interpretError, fetchInterpretation]);
-
-  // result가 변경되면 다시 분석할 수 있도록 ref 리셋
-  useEffect(() => {
-    analysisTriggeredRef.current = false;
-  }, [result.simulationId]);
 
   // API 미설정 상태
   if (apiAvailable === false) {

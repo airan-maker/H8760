@@ -67,15 +67,26 @@ export function InterpretationCard({
   if (!interpretation) {
     return (
       <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-6">
-        <div className="flex items-center justify-center py-12">
-          <div className="flex flex-col items-center gap-4">
-            <div className="relative">
-              <div className="w-12 h-12 border-4 border-hydrogen-100 rounded-full"></div>
-              <div className="w-12 h-12 border-4 border-hydrogen-500 rounded-full animate-spin border-t-transparent absolute top-0 left-0"></div>
-            </div>
-            <p className="text-dark-500 animate-pulse">Bankability 분석 준비 중...</p>
-            <p className="text-dark-400 text-sm">잠시만 기다려주세요</p>
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <div className="w-16 h-16 bg-hydrogen-100 rounded-2xl flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-hydrogen-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
+          <h3 className="text-lg font-semibold text-dark-700 mb-2">Bankability 분석</h3>
+          <p className="text-dark-400 max-w-md mb-6">
+            AI가 프로젝트의 금융조달 가능성을 분석합니다.<br />
+            DSCR, 리스크 평가, Covenant 분석을 수행합니다.
+          </p>
+          <button
+            onClick={onRefresh}
+            className="px-6 py-3 bg-hydrogen-500 text-white rounded-xl hover:bg-hydrogen-600 transition-colors font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            분석 시작
+          </button>
         </div>
       </div>
     );
