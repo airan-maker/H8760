@@ -1,10 +1,12 @@
 import { Card, NumberInput, Slider, Select } from '../common';
+import CapexGuide from './CapexGuide';
 import type { CostConfig as CostConfigType } from '../../types';
 import { formatCurrency } from '../../utils/formatters';
 
 interface Props {
   config: CostConfigType;
   onChange: (config: CostConfigType) => void;
+  capacityMw?: number; // CAPEX 가이드를 위한 용량 (MW)
 }
 
 const electricitySourceOptions = [
@@ -13,13 +15,20 @@ const electricitySourceOptions = [
   { value: 'HYBRID', label: '하이브리드' },
 ];
 
-export default function CostConfig({ config, onChange }: Props) {
+export default function CostConfig({ config, onChange, capacityMw = 10 }: Props) {
   const update = <K extends keyof CostConfigType>(key: K, value: CostConfigType[K]) => {
     onChange({ ...config, [key]: value });
   };
 
   // OPEX 자동 계산
   const annualOpex = config.capex * (config.opexRatio / 100);
+
+  // CAPEX 가이드에서 값 적용 핸들러
+  const handleApplyCapex = (adjustedCapex: number) => {
+    update('capex', adjustedCapex);
+    // 스택 교체 비용도 연동 (CAPEX의 11%)
+    update('stackReplacementCost', adjustedCapex * 0.11);
+  };
 
   return (
     <Card title="비용 구조" description="투자비 및 운영비를 설정합니다">
@@ -30,6 +39,13 @@ export default function CostConfig({ config, onChange }: Props) {
           onChange={(v) => update('capex', v)}
           unit="원"
           helpText={`약 ${formatCurrency(config.capex, true)}`}
+        />
+
+        {/* CAPEX 변동 가이드 */}
+        <CapexGuide
+          capacityMw={capacityMw}
+          currentCapex={config.capex}
+          onApplyCapex={handleApplyCapex}
         />
 
         <Slider

@@ -698,25 +698,25 @@ export default function Dashboard() {
             <div className="mb-4 p-3 bg-dark-50 rounded-xl">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-dark-400">프로젝트 타임라인</span>
-                <span className="text-sm font-medium text-dark-700">총 {input.financial.projectLifetime}년</span>
+                <span className="text-sm font-medium text-dark-700">총 {currentInput.financial.projectLifetime}년</span>
               </div>
               <div className="flex h-6 rounded-lg overflow-hidden">
-                {input.financial.constructionPeriod > 0 && (
+                {currentInput.financial.constructionPeriod > 0 && (
                   <div
                     className="bg-amber-400 flex items-center justify-center text-xs font-medium text-amber-900"
-                    style={{ width: `${(input.financial.constructionPeriod / input.financial.projectLifetime) * 100}%` }}
+                    style={{ width: `${(currentInput.financial.constructionPeriod / currentInput.financial.projectLifetime) * 100}%` }}
                   >
-                    {input.financial.constructionPeriod > 1 ? `건설 ${input.financial.constructionPeriod}년` : '건설'}
+                    {currentInput.financial.constructionPeriod > 1 ? `건설 ${currentInput.financial.constructionPeriod}년` : '건설'}
                   </div>
                 )}
                 <div
                   className="bg-hydrogen-400 flex items-center justify-center text-xs font-medium text-hydrogen-900"
-                  style={{ width: `${((input.financial.projectLifetime - input.financial.constructionPeriod) / input.financial.projectLifetime) * 100}%` }}
+                  style={{ width: `${((currentInput.financial.projectLifetime - currentInput.financial.constructionPeriod) / currentInput.financial.projectLifetime) * 100}%` }}
                 >
-                  운영 {input.financial.projectLifetime - input.financial.constructionPeriod}년
+                  운영 {currentInput.financial.projectLifetime - currentInput.financial.constructionPeriod}년
                 </div>
               </div>
-              {input.financial.constructionPeriod > 0 && (
+              {currentInput.financial.constructionPeriod > 0 && (
                 <p className="text-xs text-dark-400 mt-2">* 건설 기간 중에는 매출이 발생하지 않습니다</p>
               )}
             </div>

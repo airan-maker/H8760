@@ -396,6 +396,7 @@ export default function SimulationConfig() {
             <CostConfig
               config={input.cost}
               onChange={(cost) => setInput({ ...input, cost })}
+              capacityMw={input.equipment.electrolyzerCapacity}
             />
           )}
           {activeTab === 'market' && (
