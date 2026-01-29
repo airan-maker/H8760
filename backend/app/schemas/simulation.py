@@ -2,6 +2,7 @@
 시뮬레이션 입력 스키마
 
 기본값은 2024-2025년 한국 시장 기준 리서치 결과를 반영합니다.
+프리셋은 정부 보조금/세액공제를 활용한 현실적인 수익성 시나리오입니다.
 
 주요 참고 수치:
 - 수소 LHV: 33.33 kWh/kg
@@ -10,6 +11,14 @@
 - Alkaline 스택 수명: 60,000~90,000시간
 - PEM 저하율: ~0.5%/년, Alkaline 저하율: ~0.3%/년
 - 스택 교체 비용: PEM ~11% of CAPEX, Alkaline ~15% of CAPEX
+
+프리셋 시나리오 (10MW PEM 전해조, 정부 지원 포함):
+- CAPEX: 150억원 (150만원/kW) - 2024년 글로벌 평균
+- 전력단가: 70원/kWh (재생에너지 PPA)
+- 수소판매가: 8,500원/kg (청정수소 시장가격)
+- 투자세액공제: 10% (조특법 적용)
+- 설비보조금: 20% (정부 실증사업 지원)
+- 생산보조금: 500원/kg × 10년 (청정수소 생산 지원)
 """
 from typing import Literal, Optional
 from pydantic import BaseModel, Field
@@ -63,19 +72,19 @@ class CostConfig(BaseModel):
     """비용 구조 설정"""
 
     capex: float = Field(
-        default=50_000_000_000, ge=0, description="CAPEX (원) - 10MW 기준 약 150만원/kW"
+        default=15_000_000_000, ge=0, description="CAPEX (원) - 10MW 기준 약 150만원/kW = 150억원"
     )
     opex_ratio: float = Field(
         default=2.5, ge=0, le=10, description="OPEX 비율 (% of CAPEX) - 업계 표준 2~5%"
     )
     stack_replacement_cost: float = Field(
-        default=5_500_000_000, ge=0, description="스택 교체 비용 (원) - PEM:CAPEX의 11%, Alkaline:15%"
+        default=1_650_000_000, ge=0, description="스택 교체 비용 (원) - PEM:CAPEX의 11% = 16.5억원"
     )
     electricity_source: Literal["PPA", "GRID", "HYBRID", "RENEWABLE"] = Field(
         default="PPA", description="전력 구매 방식 - RENEWABLE: 재생에너지 직접 연계"
     )
     ppa_price: Optional[float] = Field(
-        default=100.0, ge=0, le=1000, description="PPA 가격 (원/kWh) - 한국 산업용 평균 약 100원"
+        default=70.0, ge=0, le=1000, description="PPA 가격 (원/kWh) - 재생에너지 PPA 70원대"
     )
 
 
@@ -83,10 +92,10 @@ class MarketConfig(BaseModel):
     """시장 조건 설정"""
 
     h2_price: float = Field(
-        default=6000, ge=1000, le=20000, description="수소 판매가 (원/kg)"
+        default=8500, ge=1000, le=20000, description="수소 판매가 (원/kg) - 청정수소 시장가격"
     )
     h2_price_escalation: float = Field(
-        default=0.0, ge=-5, le=10, description="수소 가격 상승률 (%/year)"
+        default=2.0, ge=-5, le=10, description="수소 가격 상승률 (%/year) - 물가상승 반영"
     )
     electricity_price_scenario: str = Field(
         default="base", description="전력 가격 시나리오"
@@ -168,7 +177,7 @@ class IncentivesConfig(BaseModel):
 
     # 세액공제
     itc_enabled: bool = Field(
-        default=False, description="투자세액공제(ITC) 활성화"
+        default=True, description="투자세액공제(ITC) 활성화 - 조특법 적용"
     )
     itc_rate: float = Field(
         default=10.0, ge=0, le=50, description="투자세액공제율 (% of CAPEX)"
@@ -188,13 +197,13 @@ class IncentivesConfig(BaseModel):
         default=0.0, ge=0, description="설비투자 보조금 (원)"
     )
     capex_subsidy_rate: float = Field(
-        default=0.0, ge=0, le=50, description="설비투자 보조금율 (% of CAPEX)"
+        default=20.0, ge=0, le=50, description="설비투자 보조금율 (% of CAPEX) - 정부 실증사업"
     )
     operating_subsidy: float = Field(
-        default=0.0, ge=0, le=5000, description="운영 보조금 (원/kg H2)"
+        default=500.0, ge=0, le=5000, description="운영 보조금 (원/kg H2) - 청정수소 생산지원"
     )
     operating_subsidy_duration: int = Field(
-        default=5, ge=0, le=20, description="운영 보조금 적용기간 (년)"
+        default=10, ge=0, le=20, description="운영 보조금 적용기간 (년)"
     )
 
     # 기타 인센티브
@@ -205,7 +214,7 @@ class IncentivesConfig(BaseModel):
         default=1000.0, ge=0, le=10000, description="탄소배출권 가격 (원/kg H2)"
     )
     clean_h2_certification_enabled: bool = Field(
-        default=False, description="청정수소 인증 활성화"
+        default=True, description="청정수소 인증 활성화 - 청정수소 인증제"
     )
     clean_h2_premium: float = Field(
         default=500.0, ge=0, le=5000, description="청정수소 인증 프리미엄 (원/kg H2)"

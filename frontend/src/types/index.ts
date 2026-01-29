@@ -239,12 +239,15 @@ export interface Preset {
 /**
  * 기본값 (리서치 결과 기반 2024-2025년 한국 시장 기준)
  *
+ * 프리셋은 정부 보조금/세액공제를 활용한 현실적인 수익성 시나리오입니다.
+ * IRR 양수, NPV 양수를 목표로 설정되어 있습니다.
+ *
  * 주요 상수:
  * - LHV (저위발열량): 33.33 kWh/kg
  * - 현재 전해조 실제 소비량: 약 50 kWh/kg (효율 약 67%)
  * - 스택 수명: PEM 45,000~80,000시간, Alkaline 60,000~90,000시간
  * - OPEX: CAPEX의 2~5%/년
- * - 한국 그린수소 가격: 5,200~7,150원/kg (2024-2025)
+ * - 한국 청정수소 가격: 8,000~10,000원/kg (2024-2025)
  */
 export const defaultSimulationInput: SimulationInput = {
   equipment: {
@@ -256,15 +259,15 @@ export const defaultSimulationInput: SimulationInput = {
     annualAvailability: 85,          // % 가동률
   },
   cost: {
-    capex: 50_000_000_000,           // 원 (10MW 기준 약 150만원/kW)
+    capex: 15_000_000_000,           // 원 (10MW × 150만원/kW = 150억원)
     opexRatio: 2.5,                  // % of CAPEX (업계 표준 2~5%)
-    stackReplacementCost: 5_500_000_000,  // 원 (CAPEX의 11% - PEM 기준 문헌값)
+    stackReplacementCost: 1_650_000_000,  // 원 (CAPEX의 11% = 16.5억원)
     electricitySource: 'PPA',
-    ppaPrice: 100,                   // 원/kWh (한국 산업용 평균 약 100원 기준)
+    ppaPrice: 70,                    // 원/kWh (재생에너지 PPA 70원대)
   },
   market: {
-    h2Price: 6000,                   // 원/kg (한국 그린수소 2024-2025년 범위 내)
-    h2PriceEscalation: 0,            // %/년
+    h2Price: 8500,                   // 원/kg (청정수소 시장가격)
+    h2PriceEscalation: 2,            // %/년 (물가상승 반영)
     electricityPriceScenario: 'base',
   },
   financial: {
@@ -291,24 +294,24 @@ export const defaultSimulationInput: SimulationInput = {
     salvageValueRate: 5,             // % (잔존가치율)
   },
   incentives: {
-    // 세액공제 (한국 수소법 기준)
-    itcEnabled: false,
-    itcRate: 10,                     // % (수소 관련 투자세액공제 최대 10%)
+    // 세액공제 (한국 조특법 적용)
+    itcEnabled: true,                // 투자세액공제 활성화
+    itcRate: 10,                     // % (수소 관련 투자세액공제)
     ptcEnabled: false,
     ptcAmount: 700,                  // 원/kg H2 (청정수소발전 입찰 기준 추정)
     ptcDuration: 10,                 // 년
 
-    // 보조금
+    // 보조금 (정부 실증사업 지원)
     capexSubsidy: 0,                 // 원
-    capexSubsidyRate: 0,             // %
-    operatingSubsidy: 0,             // 원/kg H2
-    operatingSubsidyDuration: 5,     // 년
+    capexSubsidyRate: 20,            // % (설비투자 보조금 20%)
+    operatingSubsidy: 500,           // 원/kg H2 (청정수소 생산지원)
+    operatingSubsidyDuration: 10,    // 년
 
     // 기타 인센티브
     carbonCreditPrice: 1000,         // 원/kg H2 (탄소배출권 환산 기준)
     carbonCreditEnabled: false,
     cleanH2Premium: 500,             // 원/kg H2 (청정수소 인증 프리미엄)
-    cleanH2CertificationEnabled: false,
+    cleanH2CertificationEnabled: true, // 청정수소 인증 활성화
   },
   riskWeights: {
     weatherVariability: true,

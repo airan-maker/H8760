@@ -62,6 +62,9 @@ export default function PresetSelector({ onSelect, onCustomSelect }: Props) {
   const handleSelect = (preset: Preset) => {
     setSelectedId(preset.id);
     const capex = preset.capacityMw * 1000 * preset.capexPerKw;
+    // PEM: 11%, ALK: 15%, SOEC: 12%
+    const stackReplacementRate = preset.electrolyzerType === 'ALK' ? 0.15 :
+                                  preset.electrolyzerType === 'SOEC' ? 0.12 : 0.11;
 
     onSelect({
       equipment: {
@@ -75,9 +78,9 @@ export default function PresetSelector({ onSelect, onCustomSelect }: Props) {
       cost: {
         capex: capex,
         opexRatio: 2.5,
-        stackReplacementCost: capex * 0.3,
+        stackReplacementCost: capex * stackReplacementRate,
         electricitySource: 'PPA',
-        ppaPrice: 80,
+        ppaPrice: 70,  // 재생에너지 PPA 70원대
       },
     });
   };
