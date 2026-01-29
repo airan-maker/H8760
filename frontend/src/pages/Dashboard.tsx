@@ -792,6 +792,17 @@ export default function Dashboard() {
         <SectionExplainer section="kpi" context={analysisContext} className="mt-3" />
       </section>
 
+      {/* 현금흐름 차트 */}
+      <section>
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">현금흐름 추이</span>
+          <span className="flex-1 h-px bg-dark-100"></span>
+        </div>
+        <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
+          <CashflowChart data={result.yearlyCashflow} />
+        </div>
+      </section>
+
       {/* 연도별 현금흐름 세부 테이블 (Transposed: 항목이 행, 연도가 열) */}
       <section>
         <div className="flex items-center gap-2 mb-4">
@@ -942,17 +953,6 @@ export default function Dashboard() {
           </div>
         </div>
         <SectionExplainer section="cashflow" context={analysisContext} className="mt-3" />
-      </section>
-
-      {/* 현금흐름 차트 */}
-      <section>
-        <div className="flex items-center gap-2 mb-4">
-          <span className="text-sm font-medium text-dark-400 uppercase tracking-wider">현금흐름 추이</span>
-          <span className="flex-1 h-px bg-dark-100"></span>
-        </div>
-        <div className="bg-white rounded-2xl shadow-card border border-dark-100 p-5">
-          <CashflowChart data={result.yearlyCashflow} />
-        </div>
       </section>
 
       {/* What-if 분석 */}
