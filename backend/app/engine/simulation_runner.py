@@ -282,7 +282,7 @@ def run_full_simulation(
         return float(val)
 
     class SimpleMCResult:
-        def __init__(self, npv, npv_after_tax, irr, equity_irr, h2_prod, h2_price):
+        def __init__(self, npv, npv_after_tax, irr, equity_irr, h2_prod_tons, h2_price):
             self.npv_p50 = safe_float(npv)
             self.npv_p90 = safe_float(npv * 0.85)  # 보수적 추정
             self.npv_p99 = safe_float(npv * 0.70)
@@ -296,16 +296,21 @@ def run_full_simulation(
             self.equity_irr_p90 = safe_float(equity_irr * 0.85)
             self.equity_irr_p99 = safe_float(equity_irr * 0.70)
             self.var_95 = safe_float(abs(npv * 0.15) if npv < 0 else npv * 0.15)  # VaR 추정
-            self.h2_production_distribution = [safe_float(h2_prod)] * 100
+            # h2_prod_tons는 이미 톤 단위 (kg / 1000)
+            self.h2_production_distribution = [safe_float(h2_prod_tons)] * 100
             self.npv_distribution = [safe_float(npv)] * 100
-            self.revenue_distribution = [safe_float(h2_prod * h2_price)] * 100
+            self.revenue_distribution = [safe_float(h2_prod_tons * 1000 * h2_price)] * 100  # kg로 변환하여 수익 계산
+
+    # 연간 평균 생산량 (kg -> 톤 변환)
+    avg_h2_prod_kg = sum(yearly_h2_prod) / len(yearly_h2_prod)
+    avg_h2_prod_tons = avg_h2_prod_kg / 1000  # kg -> 톤 변환
 
     mc_result = SimpleMCResult(
         npv=fin_result.npv,
         npv_after_tax=fin_result.npv_after_tax,
         irr=fin_result.irr,
         equity_irr=fin_result.equity_irr,
-        h2_prod=sum(yearly_h2_prod) / len(yearly_h2_prod),
+        h2_prod_tons=avg_h2_prod_tons,  # 톤 단위로 전달
         h2_price=market.h2_price,
     )
     log_progress("  └ NPV (세전)", f"{fin_result.npv/1e8:.1f}억원")

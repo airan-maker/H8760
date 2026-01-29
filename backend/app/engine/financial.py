@@ -914,8 +914,14 @@ def run_financial_analysis(
             stack_replacement_years = []
 
     # 현금흐름 계산 (세전/세후)
-    # 초기 투자 = 자기자본 + 운전자본
-    initial_equity_investment = equity_amount + working_capital
+    # Project IRR용: 초기 투자 = 총 CAPEX + 운전자본 (프로젝트 전체 관점)
+    # Equity IRR용: 초기 투자 = 자기자본 + 운전자본 (투자자 관점)
+    initial_project_investment = effective_capex + working_capital  # Project IRR용
+    initial_equity_investment = equity_amount + working_capital  # Equity IRR용
+
+    # Project cashflows: 총 투자비 기준, 부채상환 제외 (프로젝트 자체 수익성)
+    cashflows_project = [-initial_project_investment]
+    # Equity cashflows: 자기자본 기준, 부채상환 포함 (투자자 수익)
     cashflows_before_tax = [-initial_equity_investment]
     cashflows_after_tax = [-initial_equity_investment]
     yearly_cashflows = []
@@ -994,7 +1000,11 @@ def run_financial_analysis(
         # 순이익
         net_income = ebt - tax
 
-        # 세전 순현금흐름 (기존 방식 유지 - 호환성)
+        # Project 순현금흐름 (부채상환 제외 - 프로젝트 자체 수익성 평가용)
+        # Project IRR 계산에 사용: 프로젝트 자체의 수익성을 금융구조와 무관하게 평가
+        net_cf_project = ebitda
+
+        # Equity 세전 순현금흐름 (부채상환 포함 - 기존 방식 유지)
         net_cf_before_tax = ebitda - ds
 
         # 세후 순현금흐름
@@ -1006,9 +1016,11 @@ def run_financial_analysis(
         terminal_value = 0.0
         if year == config.project_lifetime:
             terminal_value = salvage_value + working_capital
+            net_cf_project += terminal_value
             net_cf_before_tax += terminal_value
             net_cf_after_tax += terminal_value
 
+        cashflows_project.append(net_cf_project)
         cashflows_before_tax.append(net_cf_before_tax)
         cashflows_after_tax.append(net_cf_after_tax)
         cumulative += net_cf_before_tax
@@ -1039,19 +1051,20 @@ def run_financial_analysis(
             )
         )
 
-    # NPV 계산 (세전)
+    # NPV 계산 (세전) - Project 관점 (총 투자비 기준, 부채상환 제외)
     npv_before_tax = 0
     r = config.discount_rate / 100
-    for t, cf in enumerate(cashflows_before_tax):
+    for t, cf in enumerate(cashflows_project):
         npv_before_tax += cf / ((1 + r) ** t)
 
-    # NPV 계산 (세후)
+    # NPV 계산 (세후) - Equity 관점
     npv_after_tax = 0
     for t, cf in enumerate(cashflows_after_tax):
         npv_after_tax += cf / ((1 + r) ** t)
 
-    # Project IRR 계산 (세전)
-    project_irr = _calculate_irr(cashflows_before_tax)
+    # Project IRR 계산 (세전) - 총 투자비 기준, 부채상환 제외
+    # 프로젝트 자체의 수익성을 금융구조와 무관하게 평가
+    project_irr = _calculate_irr(cashflows_project)
 
     # Equity IRR 계산 (세후 자기자본 현금흐름 기준)
     equity_cashflows = calculate_equity_cashflows(config, yearly_cashflows)
