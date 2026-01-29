@@ -236,6 +236,47 @@ export interface Preset {
   capexPerKw: number;
 }
 
+// 국가별 프리셋
+export interface CountryPreset {
+  id: string;
+  name: string;
+  countryCode: string;
+  flagEmoji: string;
+  description: string;
+  currency: string;
+  currencySymbol: string;
+  exchangeRate: number;
+  // 전력 비용
+  ppaPrice: number;
+  ppaPriceKrw: number;
+  gridPrice: number;
+  gridPriceKrw: number;
+  // 수소 가격
+  h2Price: number;
+  h2PriceKrw: number;
+  h2PriceEscalation: number;
+  // 인센티브
+  itcRate: number;
+  ptcAmount: number;
+  ptcAmountKrw: number;
+  ptcDuration: number;
+  capexSubsidyRate: number;
+  operatingSubsidy: number;
+  operatingSubsidyKrw: number;
+  operatingSubsidyDuration: number;
+  // 세금
+  corporateTaxRate: number;
+  carbonPrice: number;
+  carbonPriceKrw: number;
+  // 금융
+  interestRate: number;
+  discountRate: number;
+  // CAPEX 조정
+  capexMultiplier: number;
+  laborCostMultiplier: number;
+  notes: string;
+}
+
 /**
  * 기본값 (리서치 결과 기반 2024-2025년 한국 시장 기준)
  *

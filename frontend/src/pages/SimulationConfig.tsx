@@ -3,6 +3,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Button } from '../components/common';
 import {
   PresetSelector,
+  CountryPresetSelector,
   EquipmentConfig,
   CostConfig,
   MarketConfig,
@@ -15,7 +16,7 @@ import { simulationApi } from '../services/api';
 import type { SimulationInput, SimulationResult } from '../types';
 import { useSimulationContext } from '../contexts/SimulationContext';
 
-type TabType = 'preset' | 'equipment' | 'cost' | 'market' | 'financial' | 'tax' | 'incentives' | 'risk';
+type TabType = 'preset' | 'country' | 'equipment' | 'cost' | 'market' | 'financial' | 'tax' | 'incentives' | 'risk';
 
 export default function SimulationConfig() {
   const navigate = useNavigate();
@@ -233,7 +234,8 @@ export default function SimulationConfig() {
   }, [autoRun]);
 
   const tabs = [
-    { id: 'preset', label: '프리셋' },
+    { id: 'preset', label: '설비 프리셋' },
+    { id: 'country', label: '국가별' },
     { id: 'equipment', label: '설비' },
     { id: 'cost', label: '비용' },
     { id: 'market', label: '시장' },
@@ -247,6 +249,11 @@ export default function SimulationConfig() {
     preset: (
       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+      </svg>
+    ),
+    country: (
+      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
     ),
     equipment: (
@@ -361,6 +368,22 @@ export default function SimulationConfig() {
             <PresetSelector
               onSelect={handlePresetSelect}
               onCustomSelect={() => setActiveTab('equipment')}
+            />
+          )}
+          {activeTab === 'country' && (
+            <CountryPresetSelector
+              currentInput={input}
+              onApply={(partialInput) => {
+                setInput((prev) => ({
+                  ...prev,
+                  ...partialInput,
+                  cost: { ...prev.cost, ...partialInput.cost },
+                  market: { ...prev.market, ...partialInput.market },
+                  financial: { ...prev.financial, ...partialInput.financial },
+                  tax: { ...prev.tax, ...partialInput.tax },
+                  incentives: { ...prev.incentives, ...partialInput.incentives },
+                }));
+              }}
             />
           )}
           {activeTab === 'equipment' && (

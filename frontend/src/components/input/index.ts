@@ -6,3 +6,4 @@ export { default as TaxConfig } from './TaxConfig';
 export { default as IncentivesConfig } from './IncentivesConfig';
 export { default as RiskWeightConfig } from './RiskWeightConfig';
 export { default as PresetSelector } from './PresetSelector';
+export { default as CountryPresetSelector } from './CountryPresetSelector';

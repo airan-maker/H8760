@@ -7,6 +7,7 @@ import type {
   SimulationInput,
   SimulationResult,
   Preset,
+  CountryPreset,
 } from '../types';
 import { auth } from '../config/firebase';
 
@@ -277,6 +278,44 @@ export const dataApi = {
   getElectricityPrices: async (scenario: string = 'base') => {
     const response = await api.get(`/data/electricity-prices/${scenario}`);
     return response.data;
+  },
+
+  // 국가별 프리셋 목록 조회
+  getCountryPresets: async (): Promise<CountryPreset[]> => {
+    const response = await api.get('/data/country-presets');
+    return response.data.map((p: Record<string, unknown>) => ({
+      id: p.id,
+      name: p.name,
+      countryCode: p.country_code,
+      flagEmoji: p.flag_emoji,
+      description: p.description,
+      currency: p.currency,
+      currencySymbol: p.currency_symbol,
+      exchangeRate: p.exchange_rate,
+      ppaPrice: p.ppa_price,
+      ppaPriceKrw: p.ppa_price_krw,
+      gridPrice: p.grid_price,
+      gridPriceKrw: p.grid_price_krw,
+      h2Price: p.h2_price,
+      h2PriceKrw: p.h2_price_krw,
+      h2PriceEscalation: p.h2_price_escalation,
+      itcRate: p.itc_rate,
+      ptcAmount: p.ptc_amount,
+      ptcAmountKrw: p.ptc_amount_krw,
+      ptcDuration: p.ptc_duration,
+      capexSubsidyRate: p.capex_subsidy_rate,
+      operatingSubsidy: p.operating_subsidy,
+      operatingSubsidyKrw: p.operating_subsidy_krw,
+      operatingSubsidyDuration: p.operating_subsidy_duration,
+      corporateTaxRate: p.corporate_tax_rate,
+      carbonPrice: p.carbon_price,
+      carbonPriceKrw: p.carbon_price_krw,
+      interestRate: p.interest_rate,
+      discountRate: p.discount_rate,
+      capexMultiplier: p.capex_multiplier,
+      laborCostMultiplier: p.labor_cost_multiplier,
+      notes: p.notes,
+    }));
   },
 };
 
